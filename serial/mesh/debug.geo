@@ -1,0 +1,15 @@
+Point(1) = {-0.5, 0.0, 0, 1.0};
+Point(2) = {-0.25, 0.0, 0, 1.0};
+Point(3) = {0.0, 0.0, 0, 1.0};
+Point(4) = {0.25, 0.0, 0, 1.0};
+Point(5) = {0.5, 0.0, 0, 1.0};
+Circle(1) = {4, 3, 2};
+Circle(2) = {5, 3, 1};
+Line(3) = {1, 2};
+Line(4) = {4, 5};
+Line Loop(5) = {1, -3, -2, -4};
+Plane Surface(6) = {5};
+Transfinite Surface {6};
+Transfinite Surface {6} = {4, 5, 1, 2};
+Transfinite Line {3, 4} = 10 Using Progression 1;
+Transfinite Line {1, 2} = 10 Using Progression 1;

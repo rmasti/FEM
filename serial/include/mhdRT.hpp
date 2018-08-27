@@ -81,6 +81,9 @@ struct constants
 */
 
 ////////////// FUNCTION PROTOTYPES ////////////////////o
+
+int main();
+
 /*
 constants loadInputFile(string FileName);
 

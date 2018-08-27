@@ -1,7 +1,7 @@
 # define variables
 VPATH   = ./
-HDRDIR  = ./include ../Eigen
-LIBDIR	= ./lib  ../Eigen
+HDRDIR  = ./include 
+LIBDIR	= ./lib  
 # adjust this for your system
 
 # set options for this machine
@@ -28,13 +28,11 @@ LIBS = -lm
 # list of objects to be compiled
 
 OBJS = \
-       src/fp_m.o\
-       src/fp_f.o
+       src/gmsh_io.o\
+       src/mhdRT.o
 
 TESTS = \
 	test/unitTest.o
-
-
 	#src/fp_f.o\
 
 main:$(OBJS) 
