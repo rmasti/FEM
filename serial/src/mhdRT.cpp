@@ -11,7 +11,8 @@ using namespace std;
 # include "mhdRT.hpp"
 
 
-int main ( )
+//int main ( )
+int main (int argc, char * argv[])
 {
   int *element_node;
   int element_num;

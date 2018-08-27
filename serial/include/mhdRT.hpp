@@ -82,7 +82,7 @@ struct constants
 
 ////////////// FUNCTION PROTOTYPES ////////////////////o
 
-int main();
+int main (int argc, char * argv[]);
 
 /*
 constants loadInputFile(string FileName);
