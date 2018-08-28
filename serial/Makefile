@@ -28,8 +28,8 @@ LIBS = -lm
 # list of objects to be compiled
 
 OBJS = \
-       src/gmsh_io.o\
-       src/mhdRT.o
+       src/mhdRT_m.o\
+       src/mhdRT_f.o
 
 TESTS = \
 	test/unitTest.o

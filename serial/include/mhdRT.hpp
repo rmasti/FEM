@@ -16,6 +16,9 @@
 #include <sstream>
 #include <algorithm>
 #include <vector>
+#include <cstdlib>
+#include <iostream>
+#include <cstring>
 
 //#include <Eigen/Dense>
 
@@ -41,21 +44,26 @@ using namespace std;
 #define rhoid  0           // V1 and U1
 #define uid 1              // V2
 #define vid 2              // V3
-#define pid 3              // V4
+#define wid 3              // V3
+#define pid 4              // V4
+#define bxid 5             // V5
+#define byid 6             // V5
+#define bzid 7             // V5
 
-#define rhouid 1           // U2
-#define rhovid 2           // U3
-#define rhoetid 3          // U4
 
-#define frhouid 0          // F1
-#define frhouuid 1         // F2
-#define frhouvid 2         // F3
-#define frhouhtid 3        // F4
-
-#define grhovid 0          // G1
-#define grhouvid 1         // G2
-#define grhovvid 2         // G3
-#define grhovhtid 3        // G4
+// CREATE STRUCTURE DEFINITION
+struct constants
+{
+  int f_limiter;           // Choose which limiter you want
+  int f_mesh;              // Which mesh to use
+  int num_ghost;           // Number of ghost layers
+  int cfl;                 // Number of ghost layers
+  int nmax;                // Maximum interation number
+  int wint;                // Write Interval
+  int pint;                // Print Interval
+  int nx_c;                 // number of cells x
+  int ny_c;                 // number of cells y
+};
 
 /* CREATE STRUCTURE DEFINITION
 struct constants
@@ -95,5 +103,15 @@ void runCase(constants C);
 
 void inputMesh(MatrixXd& xn, MatrixXd& yn, MatrixXd& zn, MatrixXd& xc, MatrixXd& yc, MatrixXd& zc, constants C);
 */
+//void inputMesh(vector<double>& xn, vector<double>& yn, vector<double>& zn, constants C);
+void inputMesh(double* xn, double* yn, double* zn, constants C);
+
+void meshSize(int* nx_i, int* ny_i, constants C);
+
+string readMeshName(constants C);
+
+void getCoord(double xn[], double yn[], double xc[], double yc[], constants C);
+
+void extrapCopyCoords(double xc_g[], double yc_g[], double xc[], double yc[], constants C);
 
 #endif
