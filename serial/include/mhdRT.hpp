@@ -1,8 +1,7 @@
 /*
- * Comp. Fluid Dynamcis
+ * TS: FEM GPU COMP
  * Written By: Robert Masti
- * 1/27/2017
- * This is a header file for nozzlem.cpp which will contain calls from the nozzlef.cpp file which will contain universal constants as well as function prototypes, and even structure declarations.
+ * 08/22/2018
  */
 #ifndef hw4_H_
 #define hw4_H_
@@ -10,7 +9,8 @@
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
-#include "math.h"
+//#include "math.h"
+#include <cmath>
 #include <iomanip>
 #include <string>
 #include <sstream>
@@ -34,9 +34,10 @@ using namespace std;
 
 #define R 287.0
 #define GAMMA 1.4
+#define MU0 1.0
 //#define PI 3.14159265359
 #define PI 3.1415926
-#define NEQ 4
+#define NEQ 8
 #define DEBUG false
 
 // DEFINE ELEMENT IDENTIFIERS
@@ -56,13 +57,14 @@ struct constants
 {
   int f_limiter;           // Choose which limiter you want
   int f_mesh;              // Which mesh to use
+  int f_case;              // Which case to run
   int num_ghost;           // Number of ghost layers
   int cfl;                 // Number of ghost layers
   int nmax;                // Maximum interation number
   int wint;                // Write Interval
   int pint;                // Print Interval
-  int nx_c;                 // number of cells x
-  int ny_c;                 // number of cells y
+  int nx_c;                // number of cells x
+  int ny_c;                // number of cells y
 };
 
 /* CREATE STRUCTURE DEFINITION
@@ -109,6 +111,21 @@ string readMeshName(constants C);
 
 void getCoord(double xn[], double yn[], double xc[], double yc[], constants C);
 
+void computeRTheta(double rc[], double thetc[], double xc[], double yc[], constants C);
+
 void extrapCopyCoords(double xl_g[], double xr_g[], double xb_g[], double xt_g[], double yl_g[], double yr_g[], double yb_g[], double yt_g[], double xc[], double yc[], constants C); 
+
+
+void computeAreasAndNormalVectors(double njx[], double njy[], double nix[], double niy[], double Aj[],  double Ai[], double xn[], double yn[], constants C);
+
+void computeVolume(double volume[], double xn[], double yn[], constants C);
+
+void outputArray(string Address, string FileName, double out[], int size,  int n);
+
+void initialize(double V[], double rc[], double thetc[], constants C);
+
+void prim2Cons(double U[], double V[], int size);
+
+void cons2Prim(double V[], double U[], int size);
 
 #endif
