@@ -13,6 +13,7 @@ int main (int argc, char * argv[])
   C.f_mesh = 1;
 
   int nx_v, ny_v;
+  cout << "Reading In the Mesh Coordinates...." << endl;
   meshSize(&nx_v, &ny_v, C);
 
   C.nx_c = nx_v-1;
@@ -30,7 +31,11 @@ int main (int argc, char * argv[])
   double xt_g[C.num_ghost*C.nx_c];
   double yb_g[C.num_ghost*C.nx_c];
   double yt_g[C.num_ghost*C.nx_c];
+
+  cout << "Extrapolating to Ghost Layers...." << endl;
   extrapCopyCoords(xl_g, xr_g, xb_g, xt_g, yl_g, yr_g, yb_g, yt_g, xc, yc, C);
+
+  cout << "Initializing Primitive Variables...." << endl;
 
   return 0;
 }
