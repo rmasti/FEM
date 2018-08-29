@@ -14,9 +14,11 @@ void extrapCopyCoords(
     double yc[], 
     constants C)
 {
-  // left right
-  xl_g[0] = 2.0*xc[0] - xc[1];
-  xl_g[1] = 2.0*xl_g[0] - xc[0];
+  if(C.num_ghost < 2)
+  {
+    cerr << "ERROR: Need to use 2 or more Ghost Layers" << endl;
+    exit(-1);
+  }
   for( int i=0; i < C.ny_c; i++)
   {
     // Left 
@@ -31,6 +33,8 @@ void extrapCopyCoords(
     yr_g[i*C.num_ghost] = 2.0*yc[(i+1)*(C.nx_c)-1] - yc[(i+1)*(C.nx_c)-2];
     yr_g[i*C.num_ghost+1] = 2.0*yr_g[i*C.num_ghost] - yc[(i+1)*(C.nx_c)-1];
 
+//printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xr_g[i*C.num_ghost+1],xr_g[i*C.num_ghost] , xc[(i+1)*(C.nx_c)-1], xc[(i+1)*(C.nx_c)-2] );
+
     // Extrapolate the rest 
     for( int j=2; j < C.num_ghost; j++)
     {
@@ -38,6 +42,33 @@ void extrapCopyCoords(
       yr_g[i*C.num_ghost+j] = 2.0*yr_g[i*C.num_ghost+j-1] -yr_g[i*C.num_ghost+j-2];
       xl_g[i*C.num_ghost+j] = 2.0*xl_g[i*C.num_ghost+j-1] -xl_g[i*C.num_ghost+j-2];
       yl_g[i*C.num_ghost+j] = 2.0*yl_g[i*C.num_ghost+j-1] -yl_g[i*C.num_ghost+j-2];
+    }
+  }
+  // top bottom
+  for(int j=0; j < C.nx_c; j++)
+  {
+    // top 
+    xt_g[j*C.num_ghost] = 2.0*xc[C.nx_c*(C.ny_c-1)+j] - xc[C.nx_c*(C.ny_c-2)+j];
+    xt_g[j*C.num_ghost+1] = 2.0*xt_g[j*C.num_ghost] - xc[C.nx_c*(C.ny_c-1)+j] ;
+    yt_g[j*C.num_ghost] = 2.0*yc[C.nx_c*(C.ny_c-1)+j] - yc[C.nx_c*(C.ny_c-2)+j];
+    yt_g[j*C.num_ghost+1] = 2.0*yt_g[j*C.num_ghost] - yc[C.nx_c*(C.ny_c-1)+j] ;
+
+    // bottom 
+    xb_g[j*C.num_ghost] = 2.0*xc[j] - xc[C.nx_c+j];
+    xb_g[j*C.num_ghost+1] = 2.0*xb_g[j*C.num_ghost] - xc[j] ;
+    yb_g[j*C.num_ghost] = 2.0*yc[j] - yc[C.nx_c+j];
+    yb_g[j*C.num_ghost+1] = 2.0*yb_g[j*C.num_ghost] - yc[j] ;
+ 
+    //printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",yb_g[j*C.num_ghost+1],yb_g[j*C.num_ghost] , yc[j], yc[C.nx_c+j] );
+    //printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xb_g[j*C.num_ghost+1],xb_g[j*C.num_ghost] , xc[C.nx_c*(C.ny_c-1)+j], xc[C.nx_c*(C.ny_c-2)+j] );
+    //printf("ghostInex = %d, xcInt1st = %d,  xcInt2nd = %d,\n", j*C.num_ghost,C.nx_c*(C.ny_c-1)+j ,C.nx_c*(C.ny_c-2)+j) ;
+
+    for(int i=2; i < C.num_ghost; i++)
+    {
+      xt_g[j*C.num_ghost+i] = 2.0*xt_g[j*C.num_ghost+i-1] -xt_g[j*C.num_ghost+i-2];
+      yt_g[j*C.num_ghost+i] = 2.0*yt_g[j*C.num_ghost+i-1] -yt_g[j*C.num_ghost+i-2];
+      xb_g[j*C.num_ghost+i] = 2.0*xb_g[j*C.num_ghost+i-1] -xb_g[j*C.num_ghost+i-2];
+      yb_g[j*C.num_ghost+i] = 2.0*yb_g[j*C.num_ghost+i-1] -yb_g[j*C.num_ghost+i-2];
     }
   }
 }
@@ -87,7 +118,7 @@ void getCoord(double xn[], double yn[], double xc[], double yc[], constants C)
       yc[i*C.nx_c+j] = 0.25*( yn[nx*i+j] + yn[nx*i+j+1] + yn[nx*(i+1)+j] + yn[nx*(i+1)+j+1] );
 
       //cout << nx*i+j <<" " << nx*i+j+1  <<  " " << nx*(i+1)+j  << " " <<nx*(i+1)+j+1  << endl;
-      cout << xc[i*C.nx_c+j] <<" " << yc[i*C.nx_c+j] <<  " " << xn[nx*i+j] << endl;
+      //cout << xc[i*C.nx_c+j] <<" " << yc[i*C.nx_c+j] <<  " " << xn[nx*i+j] << endl;
     }
   }
 }

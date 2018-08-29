@@ -30,7 +30,7 @@ int main (int argc, char * argv[])
   double xt_g[C.num_ghost*C.nx_c];
   double yb_g[C.num_ghost*C.nx_c];
   double yt_g[C.num_ghost*C.nx_c];
-
   extrapCopyCoords(xl_g, xr_g, xb_g, xt_g, yl_g, yr_g, yb_g, yt_g, xc, yc, C);
+
   return 0;
 }
