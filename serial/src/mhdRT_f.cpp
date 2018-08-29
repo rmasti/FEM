@@ -1,31 +1,45 @@
-//# include "gmsh_io.hpp"
 # include "mhdRT.hpp"
 
 
-void extrapCopyCoords(double xc_g[], double yc_g[], double xc[], double yc[], constants C)
+void extrapCopyCoords(
+    double xl_g[], 
+    double xr_g[], 
+    double xb_g[], 
+    double xt_g[],  
+    double yl_g[], 
+    double yr_g[], 
+    double yb_g[], 
+    double yt_g[],  
+    double xc[], 
+    double yc[], 
+    constants C)
 {
-
-  int nx = C.nx_c;
-  int nx_g = nx+2*C.num_ghost;
-  int ny = C.ny_c;
-  int ny_g = ny+2*C.num_ghost;
-  // Copy the interior values
-  for(int j=0; j < ny; j++)
+  // left right
+  xl_g[0] = 2.0*xc[0] - xc[1];
+  xl_g[1] = 2.0*xl_g[0] - xc[0];
+  for( int i=0; i < C.ny_c; i++)
   {
-    for(int i=0; i < nx; i++)
+    // Left 
+    xl_g[i*C.num_ghost] = 2.0*xc[i*C.nx_c] - xc[i*C.nx_c+1];
+    xl_g[i*C.num_ghost+1] = 2.0*xl_g[i*C.num_ghost] - xc[i*C.nx_c];
+    yl_g[i*C.num_ghost] = 2.0*yc[i*C.nx_c] - yc[i*C.nx_c+1];
+    yl_g[i*C.num_ghost+1] = 2.0*yl_g[i*C.num_ghost] - yc[i*C.nx_c];
+
+    // Right
+    xr_g[i*C.num_ghost] = 2.0*xc[(i+1)*(C.nx_c)-1] - xc[(i+1)*(C.nx_c)-2];
+    xr_g[i*C.num_ghost+1] = 2.0*xr_g[i*C.num_ghost] - xc[(i+1)*(C.nx_c)-1];
+    yr_g[i*C.num_ghost] = 2.0*yc[(i+1)*(C.nx_c)-1] - yc[(i+1)*(C.nx_c)-2];
+    yr_g[i*C.num_ghost+1] = 2.0*yr_g[i*C.num_ghost] - yc[(i+1)*(C.nx_c)-1];
+
+    // Extrapolate the rest 
+    for( int j=2; j < C.num_ghost; j++)
     {
-      int xcgint = i+(C.num_ghost+j)*nx_g+C.num_ghost;
-      cout << xcgint << endl;
-      xc_g[xcgint]= xc[i+j];
-      yc_g[xcgint]= yc[i+j];
+      xr_g[i*C.num_ghost+j] = 2.0*xr_g[i*C.num_ghost+j-1] -xr_g[i*C.num_ghost+j-2];
+      yr_g[i*C.num_ghost+j] = 2.0*yr_g[i*C.num_ghost+j-1] -yr_g[i*C.num_ghost+j-2];
+      xl_g[i*C.num_ghost+j] = 2.0*xl_g[i*C.num_ghost+j-1] -xl_g[i*C.num_ghost+j-2];
+      yl_g[i*C.num_ghost+j] = 2.0*yl_g[i*C.num_ghost+j-1] -yl_g[i*C.num_ghost+j-2];
     }
-
   }
-  for (int i=0; i < nx*ny; i++)
-  {
-      cout << xc_g[i] << " " << xc_g[i] << endl;
-  }
-
 }
 
 
@@ -64,12 +78,18 @@ void getCoord(double xn[], double yn[], double xc[], double yc[], constants C)
     yn[i] = data[datindex + nx*ny];
   }
 
-  for (int i=0; i < C.nx_c*C.ny_c; i++)
+  for (int i=0; i < C.ny_c; i++)
   {
-    xc[i] = 0.25*( xn[i] + xn[i+1] + xn[i+nx] + xn[i+nx+1] );
-    yc[i] = 0.25*( yn[i] + yn[i+1] + yn[i+nx] + yn[i+nx+1] );
-  }
+    for (int j=0; j < C.nx_c; j++)
+    {
 
+      xc[i*C.nx_c+j] = 0.25*( xn[nx*i+j] + xn[nx*i+j+1] + xn[nx*(i+1)+j] + xn[nx*(i+1)+j+1] );
+      yc[i*C.nx_c+j] = 0.25*( yn[nx*i+j] + yn[nx*i+j+1] + yn[nx*(i+1)+j] + yn[nx*(i+1)+j+1] );
+
+      //cout << nx*i+j <<" " << nx*i+j+1  <<  " " << nx*(i+1)+j  << " " <<nx*(i+1)+j+1  << endl;
+      cout << xc[i*C.nx_c+j] <<" " << yc[i*C.nx_c+j] <<  " " << xn[nx*i+j] << endl;
+    }
+  }
 }
 
 void meshSize(int* nx_i, int* ny_i, constants C)
@@ -118,9 +138,16 @@ string readMeshName(
   return "failure"; // return failure because it can not recognize the file
 }
 
-void inputMesh(double* xn, double* yn, double* zn, constants C)
-{
+    /*
+       cout << C.nx_c << " " << C.ny_c<< endl;
+       printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xr_g[i*C.num_ghost+1],xr_g[i*C.num_ghost] , xc[(i+1)*(C.nx_c)-1], xc[(i+1)*(C.nx_c)-2] );
+       printf("ghostInex = %d, xcInt1st = %d,  xcInt2nd = %d,\n",i*C.num_ghost ,  (i+1)*C.nx_c-1, (i+1)*C.nx_c-2);
+       printf("ghostInex = %d, xcInt1st = %d,  xcInt2nd = %d,\n",i*C.num_ghost ,  i*C.nx_c, i*C.nx_c+1);
+       printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xl_g[i*C.num_ghost+1],xl_g[i*C.num_ghost] ,  xc[i*C.nx_c], xc[i*C.nx_c+1]);
+       printf("xc1stInt = %lf, and xc2ndInt = %lf \n", xc[i*C.ny_c], xc[i*C.ny_c+1]);
+       xl_g[i*C.num_ghost] = 2.0*xc[i*C.nx_c+1] - xc[i*C.nx_c+2];
+       xl_g[i*C.num_ghost+1] = 2.0*xl_g[i*C.num_ghost] - xc[i*C.nx_c+1];
 
-  // Create the structure constants to contain info needed on all processors
+       printf("xl1st = %lf, and xl2nd = %lf \n", xl_g[i*C.num_ghost], xl_g[i*C.num_ghost+1]);
+    */
 
-}

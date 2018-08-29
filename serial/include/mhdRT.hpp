@@ -101,17 +101,14 @@ string buildCaseFolder(constants C);
 
 void runCase(constants C);
 
-void inputMesh(MatrixXd& xn, MatrixXd& yn, MatrixXd& zn, MatrixXd& xc, MatrixXd& yc, MatrixXd& zc, constants C);
 */
 //void inputMesh(vector<double>& xn, vector<double>& yn, vector<double>& zn, constants C);
-void inputMesh(double* xn, double* yn, double* zn, constants C);
-
 void meshSize(int* nx_i, int* ny_i, constants C);
 
 string readMeshName(constants C);
 
 void getCoord(double xn[], double yn[], double xc[], double yc[], constants C);
 
-void extrapCopyCoords(double xc_g[], double yc_g[], double xc[], double yc[], constants C);
+void extrapCopyCoords(double xl_g[], double xr_g[], double xb_g[], double xt_g[], double yl_g[], double yr_g[], double yb_g[], double yt_g[], double xc[], double yc[], constants C); 
 
 #endif

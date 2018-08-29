@@ -1,4 +1,3 @@
-//# include "gmsh_io.hpp"
 # include "mhdRT.hpp"
 
 int main (int argc, char * argv[])
@@ -22,10 +21,16 @@ int main (int argc, char * argv[])
   double xc[C.nx_c*C.ny_c], yc[C.nx_c*C.ny_c]; 
   getCoord(xn, yn, xc, yc, C);
 
-  double xc_g[(C.nx_c+2*C.num_ghost)*(C.ny_c+2*C.num_ghost)];
-  double yc_g[(C.nx_c+2*C.num_ghost)*(C.ny_c+2*C.num_ghost)];
-  extrapCopyCoords(xc_g, yc_g, xc, yc, C);
+  double xl_g[C.num_ghost*C.ny_c];
+  double xr_g[C.num_ghost*C.ny_c];
+  double yl_g[C.num_ghost*C.ny_c];
+  double yr_g[C.num_ghost*C.ny_c];
 
-  cout << nx_v*ny_v << endl;
+  double xb_g[C.num_ghost*C.nx_c];
+  double xt_g[C.num_ghost*C.nx_c];
+  double yb_g[C.num_ghost*C.nx_c];
+  double yt_g[C.num_ghost*C.nx_c];
+
+  extrapCopyCoords(xl_g, xr_g, xb_g, xt_g, yl_g, yr_g, yb_g, yt_g, xc, yc, C);
   return 0;
 }
