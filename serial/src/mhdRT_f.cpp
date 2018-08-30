@@ -1,7 +1,241 @@
 # include "mhdRT.hpp"
 
 
-void cons2Prim(double V[], double U[], int size)
+void MUSCL(double Ul[], double Ur[], double Ub[], double Ut[], double Ul_g[], double Ur_g[], double Ub_g[], double Ut_g[], double U[], constants C)
+{
+  int nx = C.nx_c + 1;
+  int ny = C.ny_c + 1;
+  double ULR[NEQ*5]; //5 point stencil
+
+  // left right
+  for(int i = 0; i < C.ny_c; i++)
+  {
+    int g = i*C.num_ghost;
+
+    for(int j = 0; j < C.nx_c; j++)
+    {
+      int c = i*C.nx_c + j;
+      int li = i*(nx)+j;
+      int ri = i*(nx)+j+1;
+      if(j < 2) // on left side
+      {
+        /*
+        if(j-1 < 0) // on left side 1st cell
+          for(int k = 0; k < 2; k++)
+            for(int eq = 0; eq < NEQ; eq++)
+              ULR[k*NEQ+eq] = Ul_g[g+k*NEQ+eq];
+        else       // on left side second cell
+          for(int eq = 0; eq < NEQ; eq++)
+          {
+            int k = 0; 
+            ULR[k*NEQ+eq] = Ul_g[g+k*NEQ+eq];
+          }
+          */
+      }
+      else if( j >= C.nx_c-2) // on right side
+      {
+        
+        if(j-(C.nx_c-1) < 0)// on right side 2 cells in 
+        {
+          int k = 4;
+          for(int eq=0; eq < NEQ; eq++)
+            ULR[k*NEQ+eq] = Ur_g[g+(k-4)*NEQ+eq];
+        }
+        else // on right side 1 cell in
+          for(int k = 3; k < 5; k++)
+            for(int eq = 0; eq < NEQ; eq++)
+              cout << g+eq+NEQ*(k-3) << endl;
+
+              //ULR[k*NEQ+eq] = Ur_g[g+(k-3)*NEQ+eq];
+              
+      }
+      else
+      {
+        for(int k = 0; k < 5; k++)
+          for(int eq = 0; eq < NEQ; eq++)
+            ULR[k*NEQ+eq] = U[(c+k-2)*NEQ+eq];
+      }
+      //printf("g = %d, c = %d, li = %d, ri = %d\n",g, c, li, ri);
+      for(int k = 0; k < 5; k++)
+      {
+
+        //for(int eq = 0; eq < NEQ; eq++)
+          //printf("c%d: ULR[%d] = %lf, ",c, eq, ULR[k*NEQ+eq]);
+        //cout << endl;
+            
+      }
+    }
+  }
+}
+
+double computeMaxSpeed(double V[])
+{
+  double rho, u, v, w, p, bx, by, bz;
+  rho = V[rhoid];
+  u = V[uid];
+  v = V[vid];
+  w = V[wid];
+  p = V[pid];
+  bx = V[bxid];
+  by = V[byid];
+  bz = V[bzid];
+
+  double cs, ca, cadir;
+  double bmag, vmag;
+  double maxSpeed;
+  bmag = sqrt(bx*bx+by*by+bz*bz);
+  vmag = sqrt(u*u+v*v+w*w);
+  cs = sqrt(p*GAMMA/rho);
+  ca = bmag/sqrt(MU0*rho);
+
+  cadir = ca*((bx*u+by*v+bz*w)/(bmag*vmag+1.0e-12));
+
+  maxSpeed = sqrt(0.5*(ca*ca+cs*cs+sqrt((ca*ca+cs*cs)*(ca*ca+cs*cs)-4*cs*cs*cadir*cadir)));// fast magnetosonic speed
+
+  return maxSpeed;
+}
+
+double computeTimeStep(double volume[], double Aj[], double Ai[], double njx[], double njy[], double nix[], double niy[], double V[], constants C)
+{
+  int nx = C.nx_c + 1;
+  int ny = C.ny_c + 1;
+  double dto=1e8;
+  double dt=1e8;
+
+  double nixhat, niyhat; // avg vals
+  double njxhat, njyhat; // avg vals
+  // to get eigen val
+  double lambda_j, lambda_i;
+  double Aj_avg, Ai_avg;
+
+  int c;
+  int li, ri;
+  int ti, bi;
+
+  double V0[NEQ];
+  double maxSpeed;
+
+  for(int i = 0; i < C.ny_c; i++)
+  {
+    for(int j = 0; j < C.nx_c; j++ )
+    {
+      c = i*C.nx_c + j;
+      li = i*nx + j;
+      ri = li + 1;
+      bi = i*C.nx_c + j;
+      ti = (i+1)*C.nx_c + j;
+      // left right avg
+      njxhat = 0.5*(njx[li] + njx[ri]);
+      njyhat = 0.5*(njy[li] + njy[ri]);
+      nixhat = 0.5*(nix[bi] + nix[ti]);
+      niyhat = 0.5*(niy[bi] + niy[ti]);
+
+      // A avg
+      Aj_avg = 0.5*(Aj[li]+Aj[ri]);
+      Ai_avg = 0.5*(Ai[bi]+Ai[ti]);
+
+      for(int eq = 0; eq < NEQ; eq++)
+        V0[eq] = V[c*NEQ+eq]; 
+
+      maxSpeed = computeMaxSpeed(V0); 
+      lambda_j = abs(V0[uid]*njxhat + V0[vid]*njyhat) + maxSpeed;
+      lambda_i = abs(V0[uid]*nixhat + V0[vid]*niyhat) + maxSpeed;
+
+
+      dt = C.cfl*volume[c]/(lambda_j*Aj_avg + lambda_i*Ai_avg);
+
+      if (dt < dto)
+        dto = dt;
+      //printf("cell = %d, l = %d, r = %d, b = %d, t = %d \n", c, li, ri, bi, ti);
+    }
+  }
+  dt = dto;
+
+  return dt;
+}
+
+void setBC(double Vl_g[], double Vr_g[], double Vt_g[], double Vb_g[], double njx[],double njy[], double nix[], double niy[], double V[], constants C)
+{
+  int nx = C.nx_c + 1;
+  int ny = C.ny_c + 1;
+
+  switch (C.f_case)
+  {
+    case 1: // periodic left and right
+      double V0[NEQ];
+      for(int i = 0; i < C.ny_c; i++)
+      {
+        for(int j = 0; j < C.num_ghost; j++)
+        {
+          int lInt = i*C.nx_c + j;
+          int rInt = i*(C.nx_c) + (C.nx_c-1) - j;
+          int g = i*C.num_ghost+j;
+
+          for(int eq = 0; eq < NEQ; eq++)
+          {
+            double coeff;
+            // Must flip u and v because of the geometry cyl coord half circ only
+            if ( eq == uid || eq==vid || eq==bxid || eq==byid)
+              coeff = -1.0;
+            else
+              coeff = 1.0;
+
+            // flips the things needed to be flipped
+            Vl_g[g*NEQ+eq] = coeff*V[rInt*NEQ+eq]; // left grabs right
+            Vr_g[g*NEQ+eq] = coeff*V[lInt*NEQ+eq]; // right grabs left
+          }
+        }
+      }
+      // Slip wall top and bottom see leveque page 486-487
+      for(int j=0; j < C.nx_c; j++)
+      {
+        int tFnt = C.nx_c*(ny-1) + j;
+        int bFnt =  j ;
+        double txhat = nix[tFnt];
+        double bxhat = nix[bFnt];
+        double tyhat = niy[tFnt];
+        double byhat = niy[bFnt];
+
+        for(int i=0; i < C.num_ghost; i++)
+        {
+          int g = C.num_ghost*j + i;
+          int bInt = (C.nx_c*i) + j ;
+          int tInt = C.nx_c*(C.ny_c-i-1) + j;
+
+          for(int eq = 0; eq < NEQ; eq++)
+          {
+            Vt_g[g*NEQ+eq] = V[tInt*NEQ+eq]; // top grabs top
+            Vb_g[g*NEQ+eq] = V[bInt*NEQ+eq]; // bot grabs bot
+          }
+          // Apply the slipwall with perfect conduction
+          double u = V[tInt*NEQ+uid];
+          double v = V[tInt*NEQ+vid];
+          double bx = V[tInt*NEQ+bxid];
+          double by = V[tInt*NEQ+byid];
+
+          // No vel penetration
+          Vt_g[g*NEQ+uid] = -txhat*(u*txhat+v*tyhat) - tyhat*(-u*tyhat + v*txhat);
+          Vt_g[g*NEQ+vid] = -tyhat*(u*txhat+v*tyhat) + txhat*(-u*tyhat + v*txhat);
+
+          Vb_g[g*NEQ+uid] = -bxhat*(u*bxhat+v*byhat) - byhat*(-u*byhat + v*bxhat);
+          Vb_g[g*NEQ+vid] = -byhat*(u*bxhat+v*byhat) + bxhat*(-u*byhat + v*bxhat); 
+
+          // no b penetration
+          Vt_g[g*NEQ+bxid] = -txhat*(bx*txhat+by*tyhat) - tyhat*(-bx*tyhat + by*txhat);
+          Vt_g[g*NEQ+byid] = -tyhat*(bx*txhat+by*tyhat) + txhat*(-bx*tyhat + by*txhat);
+
+          Vb_g[g*NEQ+bxid] = -bxhat*(bx*bxhat+by*byhat) - byhat*(-bx*byhat + by*bxhat); 
+          Vb_g[g*NEQ+byid] = -byhat*(bx*bxhat+by*byhat) + bxhat*(-bx*byhat + by*bxhat); 
+        }
+      }
+
+  }
+}
+
+void cons2Prim(
+    double V[],           // Output: Primitive variables
+    double U[],           // Input: Conservative variables
+    int size)             // Input: size of array must be evenly dividable by NEQ
 {
   int index; 
   double U0[NEQ];
@@ -18,7 +252,10 @@ void cons2Prim(double V[], double U[], int size)
   }
 }
 
-void prim2Cons(double U[], double V[], int size)
+void prim2Cons(
+    double U[],           // Output: Conserved variables
+    double V[],           // Input: Primitive variables
+    int size)             // Input: size of array must be evenly dividable by NEQ
 {
   int index;
   double V0[NEQ];
@@ -27,7 +264,7 @@ void prim2Cons(double U[], double V[], int size)
     index = i*NEQ;
     for(int eq = 0; eq < NEQ; eq++)
       V0[eq] = V[index+eq], U[index+eq] = V0[eq];
-  
+
     U[index+uid] = V0[rhoid]*V0[uid]; // rhou
     U[index+vid] = V0[rhoid]*V0[vid]; // rhov
     U[index+wid] = V0[rhoid]*V0[wid]; // rhow
@@ -35,7 +272,11 @@ void prim2Cons(double U[], double V[], int size)
   }
 }
 
-void initialize(double V[], double rc[], double thetc[], constants C)
+void initialize(
+    double V[],           // Output: computes the volume of each sell doing cross product
+    double rc[],          // Input: radius coordinator
+    double thetc[],       // Input: theta coordinator
+    constants C)          // Input: constants for cell sizes, initial cases
 {
   double V0[NEQ];
   double r, thet;
@@ -79,21 +320,20 @@ void initialize(double V[], double rc[], double thetc[], constants C)
           V0[bxid] = bparr0*cos(thet);
           V0[byid] = bparr0*sin(thet);
           V0[bzid] = 0.0;
-          /*
-          for(int eq = 0; eq < NEQ; eq++)
-            cout << V0[eq] << " "; 
-          cout << endl;
-          */
+
           // Fill in V
           for(int eq = 0; eq < NEQ; eq++)
             V[cIndex*NEQ+eq] = V0[eq];
-            //V[i*C.nx_c+j*NEQ + eq]
         }
       }
   }
 }
 
-void computeVolume(double volume[], double xn[], double yn[], constants C)
+void computeVolume(
+    double volume[],      // Output: computes the volume of each sell doing cross product
+    double xn[],          // Input: node coords x dir
+    double yn[],          // Input: node coords y dir
+    constants C)          // Input: constants for cell sizes
 {
   double dx1, dx2, dy1, dy2, cross;
   int nx = C.nx_c + 1;
@@ -118,15 +358,15 @@ void computeVolume(double volume[], double xn[], double yn[], constants C)
 }
 
 void computeAreasAndNormalVectors(
-    double njx[], 
-    double njy[], 
-    double nix[], 
-    double niy[], 
-    double Aj[], 
-    double Ai[], 
-    double xn[],
-    double yn[], 
-    constants C)
+    double njx[],         // Output: normal vector pointing in j increase col dir xhat
+    double njy[],         // Output: normal vector pointing in j col dir yhat
+    double nix[],         // Output: normal vector pointing in i row dir xhat
+    double niy[],         // Output: normal vector pointing in i row dir yhat
+    double Aj[],          // Output: Area for j col facing dir nc x ni
+    double Ai[],          // Output: Area for i col facing dir ni x nc
+    double xn[],          // Input: x node coords
+    double yn[],          // Input: y node coords
+    constants C)          // Input: Constants for cell sizes
 {
   int nx = C.nx_c+1; // number of interfaces/nodes x dir
   int ny = C.ny_c+1; // and y dir
@@ -142,7 +382,6 @@ void computeAreasAndNormalVectors(
       Aj[nIndex] = sqrt(dx*dx + dy*dy);
       njx[nIndex] = dy / Aj[nIndex];
       njy[nIndex] = -1.0*dx / Aj[nIndex];
-      //cout << nIndex << " " << nIndex+nx << endl;
     }
   }
   // loop for Ai or the ydir
@@ -163,17 +402,17 @@ void computeAreasAndNormalVectors(
 }
 
 void extrapCopyCoords(
-    double xl_g[], 
-    double xr_g[], 
-    double xb_g[], 
-    double xt_g[],  
-    double yl_g[], 
-    double yr_g[], 
-    double yb_g[], 
-    double yt_g[],  
-    double xc[], 
-    double yc[], 
-    constants C)
+    double xl_g[],        // Output: x left ghost cell coords
+    double xr_g[],        // Output: x right ghost cell coords
+    double xb_g[],        // Output: x bottom ghost cell coords
+    double xt_g[],        // Output: x top ghost cell coords
+    double yl_g[],        // Output: y left ghost cell coords
+    double yr_g[],        // Output: y right ghost cell coords
+    double yb_g[],        // Output: y bottom ghost cell coords
+    double yt_g[],        // Output: y top ghost cell coords
+    double xc[],          // Input: x center coords
+    double yc[],          // Input: y center coords
+    constants C)          // Input: constants including num_ghost
 {
   if(C.num_ghost < 2)
   {
@@ -193,8 +432,6 @@ void extrapCopyCoords(
     xr_g[i*C.num_ghost+1] = 2.0*xr_g[i*C.num_ghost] - xc[(i+1)*(C.nx_c)-1];
     yr_g[i*C.num_ghost] = 2.0*yc[(i+1)*(C.nx_c)-1] - yc[(i+1)*(C.nx_c)-2];
     yr_g[i*C.num_ghost+1] = 2.0*yr_g[i*C.num_ghost] - yc[(i+1)*(C.nx_c)-1];
-
-    //printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xr_g[i*C.num_ghost+1],xr_g[i*C.num_ghost] , xc[(i+1)*(C.nx_c)-1], xc[(i+1)*(C.nx_c)-2] );
 
     // Extrapolate the rest 
     for( int j=2; j < C.num_ghost; j++)
@@ -220,10 +457,6 @@ void extrapCopyCoords(
     yb_g[j*C.num_ghost] = 2.0*yc[j] - yc[C.nx_c+j];
     yb_g[j*C.num_ghost+1] = 2.0*yb_g[j*C.num_ghost] - yc[j] ;
 
-    //printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",yb_g[j*C.num_ghost+1],yb_g[j*C.num_ghost] , yc[j], yc[C.nx_c+j] );
-    //printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xb_g[j*C.num_ghost+1],xb_g[j*C.num_ghost] , xc[C.nx_c*(C.ny_c-1)+j], xc[C.nx_c*(C.ny_c-2)+j] );
-    //printf("ghostInex = %d, xcInt1st = %d,  xcInt2nd = %d,\n", j*C.num_ghost,C.nx_c*(C.ny_c-1)+j ,C.nx_c*(C.ny_c-2)+j) ;
-
     for(int i=2; i < C.num_ghost; i++)
     {
       xt_g[j*C.num_ghost+i] = 2.0*xt_g[j*C.num_ghost+i-1] -xt_g[j*C.num_ghost+i-2];
@@ -235,7 +468,12 @@ void extrapCopyCoords(
 }
 
 
-void computeRTheta(double rc[], double thetc[], double xc[], double yc[], constants C)
+void computeRTheta(
+    double rc[],          // Output: Radius coord at center coord
+    double thetc[],       // Output: Theta coord
+    double xc[],          // Output: x center coord 
+    double yc[],          // Output: x center coord 
+    constants C)          // Input: number of center in x 
 {
   int index; double x, y;
   for(int i = 0; i < C.ny_c; i++){
@@ -249,7 +487,12 @@ void computeRTheta(double rc[], double thetc[], double xc[], double yc[], consta
   }
 }
 
-void getCoord(double xn[], double yn[], double xc[], double yc[], constants C)
+void getCoord(
+    double xn[],          // Output: x node coord
+    double yn[],          // Output: y node coord
+    double xc[],          // Output: x center coord
+    double yc[],          // Output: y center coord
+    constants C)          // Input: Number of cells in dirs
 {
   int nx = C.nx_c+1;
   int ny = C.ny_c+1;
@@ -291,14 +534,14 @@ void getCoord(double xn[], double yn[], double xc[], double yc[], constants C)
 
       xc[i*C.nx_c+j] = 0.25*( xn[nx*i+j] + xn[nx*i+j+1] + xn[nx*(i+1)+j] + xn[nx*(i+1)+j+1] );
       yc[i*C.nx_c+j] = 0.25*( yn[nx*i+j] + yn[nx*i+j+1] + yn[nx*(i+1)+j] + yn[nx*(i+1)+j+1] );
-
-      //cout << nx*i+j <<" " << nx*i+j+1  <<  " " << nx*(i+1)+j  << " " <<nx*(i+1)+j+1  << endl;
-      //cout << xc[i*C.nx_c+j] <<" " << yc[i*C.nx_c+j] <<  " " << xn[nx*i+j] << endl;
     }
   }
 }
 
-void meshSize(int* nx_i, int* ny_i, constants C)
+void meshSize(
+    int* nx_i,            // Output: Number of nodes x dir
+    int* ny_i,            // Output: Number of nodes y dir
+    constants C)          // Input: Constants points to which mesh
 {
   string filename = readMeshName(C);
   const char *FILENAME = filename.c_str();
@@ -344,7 +587,12 @@ string readMeshName(
   return "failure"; // return failure because it can not recognize the file
 }
 
-void outputArray(string Address, string FileName, double out[], int size,  int n)
+void outputArray(
+    string Address,       // Output: Folder location
+    string FileName,      // Output: File name
+    double out[],         // Input: array to output double only
+    int size,             // Input: size of array because its not passed
+    int n)                // Input: Iteration number
 {
   ostringstream StrConvert;
   StrConvert << n; // import n as an ostringstream
@@ -362,16 +610,27 @@ void outputArray(string Address, string FileName, double out[], int size,  int n
 }
 
 /*
-   cout << C.nx_c << " " << C.ny_c<< endl;
-   printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xr_g[i*C.num_ghost+1],xr_g[i*C.num_ghost] , xc[(i+1)*(C.nx_c)-1], xc[(i+1)*(C.nx_c)-2] );
-   printf("ghostInex = %d, xcInt1st = %d,  xcInt2nd = %d,\n",i*C.num_ghost ,  (i+1)*C.nx_c-1, (i+1)*C.nx_c-2);
-   printf("ghostInex = %d, xcInt1st = %d,  xcInt2nd = %d,\n",i*C.num_ghost ,  i*C.nx_c, i*C.nx_c+1);
-   printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xl_g[i*C.num_ghost+1],xl_g[i*C.num_ghost] ,  xc[i*C.nx_c], xc[i*C.nx_c+1]);
-   printf("xc1stInt = %lf, and xc2ndInt = %lf \n", xc[i*C.ny_c], xc[i*C.ny_c+1]);
-   xl_g[i*C.num_ghost] = 2.0*xc[i*C.nx_c+1] - xc[i*C.nx_c+2];
-   xl_g[i*C.num_ghost+1] = 2.0*xl_g[i*C.num_ghost] - xc[i*C.nx_c+1];
 
-   printf("xl1st = %lf, and xl2nd = %lf \n", xl_g[i*C.num_ghost], xl_g[i*C.num_ghost+1]);
+//printf("ghostInex = %d, bInt = %d,  tInt= %d, bFnt = %d, tFnt = %d\n",g, bInt, tInt, bFnt, tFnt) ;
+//printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xr_g[i*C.num_ghost+1],xr_g[i*C.num_ghost] , xc[(i+1)*(C.nx_c)-1], xc[(i+1)*(C.nx_c)-2] );
+
+//printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",yb_g[j*C.num_ghost+1],yb_g[j*C.num_ghost] , yc[j], yc[C.nx_c+j] );
+//printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xb_g[j*C.num_ghost+1],xb_g[j*C.num_ghost] , xc[C.nx_c*(C.ny_c-1)+j], xc[C.nx_c*(C.ny_c-2)+j] );
+//printf("ghostInex = %d, xcInt1st = %d,  xcInt2nd = %d,\n", j*C.num_ghost,C.nx_c*(C.ny_c-1)+j ,C.nx_c*(C.ny_c-2)+j) ;
+
+
+cout << nx*i+j <<" " << nx*i+j+1  <<  " " << nx*(i+1)+j  << " " <<nx*(i+1)+j+1  << endl;
+cout << xc[i*C.nx_c+j] <<" " << yc[i*C.nx_c+j] <<  " " << xn[nx*i+j] << endl;
+cout << C.nx_c << " " << C.ny_c<< endl;
+printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xr_g[i*C.num_ghost+1],xr_g[i*C.num_ghost] , xc[(i+1)*(C.nx_c)-1], xc[(i+1)*(C.nx_c)-2] );
+printf("ghostInex = %d, xcInt1st = %d,  xcInt2nd = %d,\n",i*C.num_ghost ,  (i+1)*C.nx_c-1, (i+1)*C.nx_c-2);
+printf("ghostInex = %d, xcInt1st = %d,  xcInt2nd = %d,\n",i*C.num_ghost ,  i*C.nx_c, i*C.nx_c+1);
+printf("ghost2 = %lf, ghost1 = %lf, xcInt1st = %lf,  xcInt2nd = %lf,\n",xl_g[i*C.num_ghost+1],xl_g[i*C.num_ghost] ,  xc[i*C.nx_c], xc[i*C.nx_c+1]);
+printf("xc1stInt = %lf, and xc2ndInt = %lf \n", xc[i*C.ny_c], xc[i*C.ny_c+1]);
+xl_g[i*C.num_ghost] = 2.0*xc[i*C.nx_c+1] - xc[i*C.nx_c+2];
+xl_g[i*C.num_ghost+1] = 2.0*xl_g[i*C.num_ghost] - xc[i*C.nx_c+1];
+
+printf("xl1st = %lf, and xl2nd = %lf \n", xl_g[i*C.num_ghost], xl_g[i*C.num_ghost+1]);
 
 //cout << Aj[i*nx+j] << endl;
 //cout << dx <<" "  << dy  <<  endl;

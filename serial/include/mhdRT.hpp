@@ -59,7 +59,7 @@ struct constants
   int f_mesh;              // Which mesh to use
   int f_case;              // Which case to run
   int num_ghost;           // Number of ghost layers
-  int cfl;                 // Number of ghost layers
+  double cfl;                 // Number of ghost layers
   int nmax;                // Maximum interation number
   int wint;                // Write Interval
   int pint;                // Print Interval
@@ -103,8 +103,8 @@ string buildCaseFolder(constants C);
 
 void runCase(constants C);
 
-*/
 //void inputMesh(vector<double>& xn, vector<double>& yn, vector<double>& zn, constants C);
+*/
 void meshSize(int* nx_i, int* ny_i, constants C);
 
 string readMeshName(constants C);
@@ -128,4 +128,32 @@ void prim2Cons(double U[], double V[], int size);
 
 void cons2Prim(double V[], double U[], int size);
 
+void setBC(double Vl_g[], double Vr_g[], double Vt_g[], double Vb_g[], double njx[],double njy[], double nix[], double niy[], double V[], constants C);
+
+double computeMaxSpeed(double V[]);
+
+double computeTimeStep(double volume[], double Aj[], double Ai[], double njx[], double njy[], double nix[], double niy[], double V[], constants C);
+
+void MUSCL(double Ul[], double Ur[], double Ub[], double Ut[], double Ul_g[], double Ur_g[], double Ub_g[], double Ut_g[], double U[], constants C);
+
 #endif
+
+
+
+
+
+
+
+
+
+/*
+constants loadInputFile(string FileName);
+
+double searchInputFile(string FileName, string Var);
+
+string buildCaseFolder(constants C);
+
+void runCase(constants C);
+
+//void inputMesh(vector<double>& xn, vector<double>& yn, vector<double>& zn, constants C);
+*/
