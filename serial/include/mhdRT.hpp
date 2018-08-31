@@ -137,7 +137,7 @@ double SIGN(double a, double b);
 
 double computeTimeStep(double volume[], double Aj[], double Ai[], double njx[], double njy[], double nix[], double niy[], double V[], constants C);
 
-void MUSCL(double Ul[], double Ur[], double Ub[], double Ut[], double Ul_g[], double Ur_g[], double Ub_g[], double Ut_g[], double U[], constants C);
+void MUSCL(double lout[], double rout[], double bout[], double tout[], double Ul_g[], double Ur_g[], double Ub_g[], double Ut_g[], double U[], constants C);
 
 double limiter(double& r, constants C);
 

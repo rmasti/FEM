@@ -79,12 +79,12 @@ int main (int argc, char * argv[])
   setBC(Vl_g, Vr_g, Vt_g, Vb_g, njx, njy, nix, niy, V, C);
   //outputArray(output, "Vr_g", Vr_g, (sizeof Vr_g/sizeof *Vr_g), 0);
 
-  prim2Cons(Ul_g, Vl_g, C.num_ghost*C.ny_c*NEQ);
-  prim2Cons(Ur_g, Vr_g, C.num_ghost*C.ny_c*NEQ);
-  prim2Cons(Ut_g, Vt_g, C.num_ghost*C.nx_c*NEQ);
-  prim2Cons(Ub_g, Vb_g, C.num_ghost*C.nx_c*NEQ);
+  prim2Cons(Ul_g, Vl_g, (sizeof Ul_g/ sizeof *Ul_g));
+  prim2Cons(Ur_g, Vr_g, (sizeof Ur_g/ sizeof *Ur_g));
+  prim2Cons(Ut_g, Vt_g, (sizeof Ut_g/ sizeof *Ut_g));
+  prim2Cons(Ub_g, Vb_g, (sizeof Ub_g/ sizeof *Ub_g));
 
-  cons2Prim(Vr_g, Ur_g, C.num_ghost*C.ny_c*NEQ);
+  cons2Prim(Vr_g, Ur_g, (sizeof Vr_g/ sizeof *Vr_g));
 
   //outputArray(output, "Vr_g", Vr_g, (sizeof Vr_g/sizeof *Vr_g), 1);
   
@@ -104,13 +104,9 @@ int main (int argc, char * argv[])
   outputArray(output, "Ub_g", Ub_g, (sizeof Ub_g/sizeof *Ub_g), 0);
   outputArray(output, "Ut_g", Ut_g, (sizeof Ut_g/sizeof *Ut_g), 0);
 
-  cout <<int  (sizeof Ul_g/sizeof *Ul_g) << endl;
-
   cout << "MUSCL Extrapolation...." << endl;
   double Ul[nx_v*C.ny_c]; double Ur[nx_v*C.ny_c]; // horiz dir
   double Ub[ny_v*C.nx_c]; double Ut[ny_v*C.nx_c]; // vert dir
- // MUSCL(Ul, Ur, Ub, Ut, Ul_g, Ur_g, Ub_g, Ut_g, U, C);
-
   MUSCL(Ul, Ur, Ub, Ut, Ul_g, Ur_g, Ub_g, Ut_g, U, C);
 
 
