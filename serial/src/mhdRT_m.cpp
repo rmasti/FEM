@@ -4,7 +4,7 @@ int main (int argc, char * argv[])
 {
   // Create the structure constants to contain info needed on all processors
   constants C;
-  C.f_limiter = 1;
+  C.f_limiter = 6;
   C.num_ghost = 3;
   C.cfl = 0.5;
   C.nmax = 300;
@@ -66,7 +66,7 @@ int main (int argc, char * argv[])
   double S[nCsize];  // source terms rhou rhov and e wrt g
   initialize(V, rc, thetc, C);
   dt = computeTimeStep(volume, Aj, Ai, njx, njy, nix, niy, V, C);
-  cout << dt << endl;
+  //cout << dt << endl;
   prim2Cons(U, V, (sizeof U/sizeof *U));
 
   double Vl_g[C.num_ghost*C.ny_c*NEQ]; double Vr_g[C.num_ghost*C.ny_c*NEQ];

@@ -6,66 +6,177 @@ void MUSCL(double Ul[], double Ur[], double Ub[], double Ut[], double Ul_g[], do
   int nx = C.nx_c + 1;
   int ny = C.ny_c + 1;
   double ULR[NEQ*5]; //5 point stencil
+  double UBT[NEQ*5]; //5 point stencil
 
-  // left right
+  double theta_L, theta_R, theta_B, theta_T;
+  double delta = 1.0e-6;
+  int li, ri;
+  int bi, ti;
+
+  // left right top bottom
   for(int i = 0; i < C.ny_c; i++)
   {
     int g = i*C.num_ghost;
 
     for(int j = 0; j < C.nx_c; j++)
     {
+
+      int gv = j*C.num_ghost;
       int c = i*C.nx_c + j;
-      int li = i*(nx)+j;
-      int ri = i*(nx)+j+1;
-      if(j < 2) // on left side
+      li = i*(nx)+j;
+      ri = i*(nx)+j+1;
+      ti = (i+1)*(C.nx_c)+j;
+      bi = (i)*C.nx_c+j;
+
+      //printf("c = %d, li = %d, ri = %d, bi = %d, ti = %d\n", c, li, ri, bi, ti);
+      for(int k = 0; k < 5; k++)
       {
-        /*
-        if(j-1 < 0) // on left side 1st cell
-          for(int k = 0; k < 2; k++)
+        for(int eq = 0; eq < NEQ; eq++)
+        {
+          ULR[k*NEQ+eq] = U[(c+k-2)*NEQ+eq]; // get initial lr
+          UBT[k*NEQ+eq] = U[(c+(k-2)*C.nx_c)*NEQ+eq]; // get initial tb
+        }
+        //cout << c << " " <<(c+k-2) << " "<< (c+(k-2)*C.nx_c)<< endl;
+      }
+
+      // check if cell is bot or top side
+      if(i < 2) // on the bottom
+      {
+
+        if(i - 1 < 0) // on the very bottom
+          for(int k = 1; k >= 0; k--)
             for(int eq = 0; eq < NEQ; eq++)
-              ULR[k*NEQ+eq] = Ul_g[g+k*NEQ+eq];
+              UBT[k*NEQ+eq] = Ub_g[(gv+(1-k))*NEQ+eq];
+        else
+          for(int eq = 0; eq < NEQ; eq++)
+          {
+            int k = 0;
+            //cout << c << " " << k*NEQ+eq << " " << (gv+k)*NEQ+eq << endl;
+            UBT[k*NEQ+eq] = Ub_g[(gv+k)*NEQ+eq];
+          }
+      }
+      else if( i >= C.ny_c-2) // top side
+      {
+        if(i-(C.ny_c-1) < 0) // top side 2 layers in
+        {
+          int k = 4;
+          for(int eq=0; eq < NEQ; eq++)
+            UBT[k*NEQ+eq] = Ut_g[eq+NEQ*(gv+k-4)];
+        }
+        else
+          for(int k = 3; k < 5; k++)
+            for(int eq = 0; eq < NEQ; eq++)
+              ULR[k*NEQ+eq] = Ut_g[eq+NEQ*(gv+k-3)];
+      }
+
+      if(j < 2) //check if cell on left or right side
+      {
+
+        if(j-1 < 0) // on left side 1st cell
+          for(int k = 1; k >= 0; k--)
+            for(int eq = 0; eq < NEQ; eq++)
+              ULR[k*NEQ+eq] = Ul_g[(g+(1-k))*NEQ+eq];
+        //cout << k*NEQ+eq <<  " "<< (g+(1-k))*NEQ+eq << endl;
+        //ULR[k*NEQ+eq] = Ul_g[(g+k)*NEQ+eq];
         else       // on left side second cell
           for(int eq = 0; eq < NEQ; eq++)
           {
             int k = 0; 
-            ULR[k*NEQ+eq] = Ul_g[g+k*NEQ+eq];
+            ULR[k*NEQ+eq] = Ul_g[(g+k)*NEQ+eq];
           }
-          */
       }
       else if( j >= C.nx_c-2) // on right side
       {
-        
+
         if(j-(C.nx_c-1) < 0)// on right side 2 cells in 
         {
           int k = 4;
           for(int eq=0; eq < NEQ; eq++)
-            ULR[k*NEQ+eq] = Ur_g[g+(k-4)*NEQ+eq];
+            ULR[k*NEQ+eq] = Ur_g[eq+NEQ*(g+k-4)];
         }
         else // on right side 1 cell in
           for(int k = 3; k < 5; k++)
             for(int eq = 0; eq < NEQ; eq++)
-              cout << g+eq+NEQ*(k-3) << endl;
-
-              //ULR[k*NEQ+eq] = Ur_g[g+(k-3)*NEQ+eq];
-              
+              ULR[k*NEQ+eq] = Ur_g[eq+NEQ*(g+k-3)];
+        //cout << k*NEQ+eq << " " <<eq+NEQ*(g+k-3) << endl;
       }
-      else
-      {
-        for(int k = 0; k < 5; k++)
-          for(int eq = 0; eq < NEQ; eq++)
-            ULR[k*NEQ+eq] = U[(c+k-2)*NEQ+eq];
-      }
-      //printf("g = %d, c = %d, li = %d, ri = %d\n",g, c, li, ri);
-      for(int k = 0; k < 5; k++)
-      {
 
-        //for(int eq = 0; eq < NEQ; eq++)
-          //printf("c%d: ULR[%d] = %lf, ",c, eq, ULR[k*NEQ+eq]);
-        //cout << endl;
-            
+      for(int eq = 0; eq < NEQ; eq++)
+      {
+        int fi = 2; // left and bottom int 
+        
+        getThetaExtrap(theta_L, theta_R, ULR, fi, eq, C);
+        getThetaExtrap(theta_B, theta_T, UBT, fi, eq, C);
+
+        Ul[li*NEQ+eq] = ULR[NEQ*(fi-1)+eq] + 0.5*theta_L*(ULR[NEQ*(fi)+eq] - ULR[NEQ*(fi-1)+eq]);
+        Ur[li*NEQ+eq] = ULR[NEQ*(fi)+eq] - 0.5*theta_R*(ULR[NEQ*(fi+1)+eq] - ULR[NEQ*(fi)+eq]);
+
+        Ub[bi*NEQ+eq] = UBT[NEQ*(fi-1)+eq] + 0.5*theta_B*(UBT[NEQ*(fi)+eq] - UBT[NEQ*(fi-1)+eq]);
+        Ut[bi*NEQ+eq] = UBT[NEQ*(fi)+eq] - 0.5*theta_T*(UBT[NEQ*(fi+1)+eq] - UBT[NEQ*(fi)+eq]);
+
+        fi = 3; // right and top int
+
+        getThetaExtrap(theta_L, theta_R, ULR, fi, eq, C);
+        getThetaExtrap(theta_B, theta_T, UBT, fi, eq, C);
+
+        Ul[ri*NEQ+eq] = ULR[NEQ*(fi-1)+eq] + 0.5*theta_L*(ULR[NEQ*(fi)+eq] - ULR[NEQ*(fi-1)+eq]);
+        Ur[ri*NEQ+eq] = ULR[NEQ*(fi)+eq] - 0.5*theta_R*(ULR[NEQ*(fi+1)+eq] - ULR[NEQ*(fi)+eq]);
+        
+        Ub[ti*NEQ+eq] = UBT[NEQ*(fi-1)+eq] + 0.5*theta_B*(UBT[NEQ*(fi)+eq] - UBT[NEQ*(fi-1)+eq]);
+        Ut[ti*NEQ+eq] = UBT[NEQ*(fi)+eq] - 0.5*theta_T*(UBT[NEQ*(fi+1)+eq] - UBT[NEQ*(fi)+eq]);
+        //printf("c = %d, li = %d, ri = %d, bi = %d, ti = %d\n", c, li, ri, bi, ti);
       }
     }
   }
+}
+
+void getThetaExtrap(double& theta_A, double& theta_B, double U5[], int& ind, int& eq, constants& C)
+{
+  double denom_L, denom_R;
+  double r_L, r_R;
+  double delta = 1.0e-6;
+
+  denom_L = (U5[NEQ*(ind)+eq]-U5[NEQ*(ind-1)+eq]);
+  denom_R = (U5[NEQ*(ind+1)]-U5[NEQ*(ind)+eq]);
+  denom_L = SIGN(1,denom_L)*mymax(delta, abs(denom_L));
+  denom_R = SIGN(1,denom_R)*mymax(delta, abs(denom_R));
+  r_L = (U5[NEQ*(ind-1)+eq] - U5[NEQ*(ind-2)+eq])/denom_L;
+  r_R = (U5[NEQ*(ind)+eq] - U5[NEQ*(ind-1)+eq])/denom_R;
+  theta_A = limiter(r_L, C);
+  theta_B = limiter(r_R, C);
+}
+
+double limiter(double& r, constants C)
+{
+  double theta;
+  /*
+     %   theta = 1 no limiter
+     %   theta = 2 van leer
+     %   theta = 3 van albaada
+     %   theta = 4 ospre
+     %   theta = 5 monotized central least diffusive
+     %   theta = 6 MINMOD
+     %   theta = 7 superbee
+     */
+
+  switch (C.f_limiter)
+  {
+    case 1: 
+      theta = 1.0;
+    case 2: 
+      theta = (r+abs(r))/(1+abs(r));
+    case 3:
+      theta = (r+r*r)/(1+r*r);
+    case 4:
+      theta = 1.5*(r*r + r) / (1 + r + r*r);
+    case 5:
+      theta = mymax(0,mymin(2.0*r,mymin(0.5*(1+r),2)));
+    case 6:
+      theta = mymax(0,mymin(1.0,r)); 
+    case 7: 
+      theta = mymax(0,mymax(mymin(2.0*r,1),mymin(r,2)));
+  }
+  return theta;
 }
 
 double computeMaxSpeed(double V[])
@@ -607,6 +718,14 @@ void outputArray(
     outfile << setprecision(14) << out[i]  << endl;
 
   outfile.close();
+}
+
+double SIGN(double a, double b)
+{
+  if (b<0)
+    return -a;
+  else
+    return a;
 }
 
 /*

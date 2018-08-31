@@ -132,9 +132,15 @@ void setBC(double Vl_g[], double Vr_g[], double Vt_g[], double Vb_g[], double nj
 
 double computeMaxSpeed(double V[]);
 
+double SIGN(double a, double b);
+
 double computeTimeStep(double volume[], double Aj[], double Ai[], double njx[], double njy[], double nix[], double niy[], double V[], constants C);
 
 void MUSCL(double Ul[], double Ur[], double Ub[], double Ut[], double Ul_g[], double Ur_g[], double Ub_g[], double Ut_g[], double U[], constants C);
+
+double limiter(double& r, constants C);
+
+void getThetaExtrap(double& theta_A, double& theta_B, double U5[], int& ind, int& eq, constants& C);
 
 #endif
 
