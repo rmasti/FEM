@@ -1,17 +1,72 @@
 # include "mhdRT.hpp"
 
+void rungeKutta(double U_RK[], double U[], double Res[], double volume[], double& dt, int& k, constants C)
+{
+  double a[4];
+  if (RKORDER == 1) // 1 stage RK
+  {
+    a[0] = 1.0; a[1]=a[2]=a[3]=0;
+  }
+  if (RKORDER == 2) // 2 stage RK                                      
+  {
+    a[0] = 0.5; a[1] = 1.0; a[2]=a[3]=0;
+  }
+  if (RKORDER == 4) // 4 stage RK
+  {
+    a[0] = 0.25; a[1] = 1.0/3.0; a[2] = 0.5; a[3] = 1.0;
+  }
+  if (RKORDER == 3 || RKORDER > 4) // no sense in doing 3
+  {
+    cerr << "ERROR: RK Order Not Available?!?!" << endl;
+    exit(1);
+  } 
+
+  int c, cneq;
+  for(int i = 0; i < C.ny_c; i++)
+  {
+    for(int j = 0; j < C.nx_c; j++)
+    {
+      c = i*C.nx_c + j;
+      for(int eq = 0; eq < NEQ; eq++)
+      {
+        cneq = c*NEQ;
+        U_RK[cneq+eq] = U[cneq+eq] - a[k]*dt*Res[cneq+eq]/volume[c];
+      }
+    }
+  }
+}
+
+void computeRes(double Res[],double S[], double F[], double G[], double Aj[], double Ai[], double volume[], constants C)
+{
+  int c, ri, li, bi, ti;
+  int nx = C.nx_c+1;
+  for(int i = 0; i < C.ny_c; i++)
+  {
+    for(int j = 0; j < C.nx_c; j++)
+    {
+      c = i*C.nx_c + j;
+      li = i*(nx)+j;
+      ri = i*(nx)+j+1;
+      ti = (i+1)*(C.nx_c)+j;
+      bi = (i)*C.nx_c+j;
+      for(int eq = 0; eq < NEQ; eq++)
+        Res[c*NEQ+eq] = F[ri*NEQ+eq]*Aj[ri] + G[ti*NEQ+eq]*Ai[ti] - F[li*NEQ+eq]*Aj[li] - G[bi*NEQ+eq]*Ai[bi] - S[c*NEQ+eq]*volume[c];
+    }
+  }
+}
+
 void compute2dFlux(double F[], double G[], double Ul[], double Ur[], double Ub[], double Ut[], double njx[], double njy[], double nix[], double niy[], constants C)
 {
   double UL_L[NEQ], UR_L[NEQ], UB_B[NEQ], UT_B[NEQ];
   double UL_R[NEQ], UR_R[NEQ], UB_T[NEQ], UT_T[NEQ];
   double FLUX[NEQ];
   int nx = C.nx_c+1;
-  int ri, li, bi, ti;
+  int c, ri, li, bi, ti;
   for(int i = 0; i < C.ny_c; i++)
   {
     for(int j = 0; j < C.nx_c; j++)
     {
-      int c = i*C.nx_c + j;
+      c = i*C.nx_c + j;
       li = i*(nx)+j;
       ri = i*(nx)+j+1;
       ti = (i+1)*(C.nx_c)+j;
@@ -27,40 +82,118 @@ void compute2dFlux(double F[], double G[], double Ul[], double Ur[], double Ub[]
         UL_R[eq] = Ul[ri*NEQ+eq]; UR_R[eq] = Ur[ri*NEQ+eq];
         UB_T[eq] = Ub[ti*NEQ+eq]; UT_T[eq] = Ut[ti*NEQ+eq];
       }
-      cout << endl;
       //printf("c = %d, li = %d, ri = %d, bi = %d, ti = %d\n", c, li, ri, bi, ti);
 
-      computeFlux(FLUX, UL_L, UR_R, njx[li], njy[li], 0);
-
-      //cout << FLUX[0] << " " << endl;
-
-
-      /*
-         CR = computeMaxSpeed(UR); CL = computeMaxSpeed(UL);
-         CB = computeMaxSpeed(UB); CL = computeMaxSpeed(UT);
-         u_L = (UL[cneq+uid]*njx[li] + UL[cneq+vid]*njy[li])/UL[cneq+rhoid]; 
-         u_R = (UR[cneq+uid]*njx[li] + UR[cneq+vid]*njy[li])/UR[cneq+rhoid]; 
-         */
-
+      computeFlux(FLUX, UL_L, UR_L, njx[li], njy[li], 0);
+      for(int eq = 0; eq < NEQ; eq++)
+        F[li*NEQ+eq] = FLUX[eq];
+      computeFlux(FLUX, UL_R, UR_R, njx[ri], njy[ri], 0);
+      for(int eq = 0; eq < NEQ; eq++)
+        F[ri*NEQ+eq] = FLUX[eq];
+      computeFlux(FLUX, UB_B, UT_B, nix[bi], niy[bi], 1);
+      for(int eq = 0; eq < NEQ; eq++)
+        G[bi*NEQ+eq] = FLUX[eq];
+      computeFlux(FLUX, UB_T, UT_T, nix[ti], niy[ti], 1);
+      for(int eq = 0; eq < NEQ; eq++)
+        G[ti*NEQ+eq] = FLUX[eq];
     }
   }
 }
 
 void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG)
 {
-  for(int eq = 0; eq < NEQ ; eq++)
-  {
-    //printf("UA[%d] = %lf, ", eq, UA[eq]);
-
-
-  }
-  //cout << endl;
   double CA = computeMaxSpeed(UA);
   double CB = computeMaxSpeed(UB);
-  // cout << CA << " " << CB << endl;
+  double u_A, u_B;
+
+  u_A = (UA[uid]*nxhat + UA[vid]*nyhat)/UA[rhoid]; 
+  u_B = (UB[uid]*nxhat + UB[vid]*nyhat)/UB[rhoid]; 
+
+  double lambdaA, lambdaB;
+  lambdaA = mymin(u_A, u_B) - mymax(CA, CB);
+  lambdaB = mymax(u_A, u_B) + mymax(CA, CB);
+
+  double FA[NEQ], FB[NEQ];
+
+  if (ForG == 0)
+  {
+    fFlux(FA, UA);
+    fFlux(FB, UB);
+  }
+  else if (ForG == 1)
+  {
+    gFlux(FA, UA);
+    gFlux(FB, UB);
+  }
+  else
+  {
+    cerr << "ERROR: You fluxed up" << endl;
+    exit(-1);
+  }
+
+  if (lambdaA > 0)
+    for(int eq = 0; eq < NEQ; eq++)
+      F[eq] = FA[eq];
+  else if (lambdaB < 0)
+    for(int eq = 0; eq < NEQ; eq++)
+      F[eq] = FB[eq];
+  else if (lambdaB >=0 && lambdaA <=0)
+    for(int eq = 0; eq < NEQ; eq++)
+      F[eq] = (lambdaB*FA[eq] - lambdaA*FB[eq]+lambdaA*lambdaB*(UB[eq]-UA[eq]))/(lambdaB-lambdaA);
+  else
+  {
+    cerr << "ERROR: You fluxed up 2" << endl;
+    exit(-1);
+  }
 
 }
+void fFlux(double F[], double U[])
+{
+  double e;
+  double V[NEQ];
+  cons2Prim(V, U, NEQ);
 
+  F[rhoid] = V[rhoid]*V[uid]; 
+  F[uid] = V[rhoid]*V[uid]*V[uid] - (V[bxid]*V[bxid])/MU0 + V[pid] + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])/(2*MU0);
+
+  F[vid] = V[rhoid]*V[uid]*V[vid]- V[bxid]*V[byid]/MU0;
+
+  F[wid] = V[rhoid]*V[uid]*V[wid] - V[bxid]*V[bzid]/MU0;
+
+  e = V[pid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
+
+  F[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*V[uid] - (1/MU0)*V[bxid]*(V[uid]*V[bxid]+V[vid]*V[byid]+V[wid]*V[bzid]);
+
+  F[bxid] = 0;
+
+  F[byid] = V[uid]*V[byid]-V[vid]*V[bxid];
+
+  F[bzid] = V[uid]*V[bzid]-V[wid]*V[bxid];
+}
+void gFlux(double G[], double U[])
+{
+  double e;
+  double V[NEQ];
+  cons2Prim(V, U, NEQ);
+
+  G[rhoid] = V[rhoid]*V[vid];
+
+  G[uid] = V[rhoid]*V[uid]*V[vid]- V[bxid]*V[byid]/MU0;
+
+  G[vid] = V[rhoid]*V[vid]*V[vid] - (V[byid]*V[byid])/MU0 + V[pid] + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])/(2*MU0);
+
+  G[wid] = V[rhoid]*V[vid]*V[wid]-V[byid]*V[bzid]/MU0;
+
+  e = V[pid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
+
+  G[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*V[vid] - (1/MU0)*V[byid]*(V[uid]*V[bxid]+V[vid]*V[byid]+ V[wid]*V[bzid]);
+
+  G[bxid] = V[vid]*V[bxid]-V[uid]*V[byid];
+
+  G[byid] = 0;
+
+  G[bzid] = V[vid]*V[bzid]-V[wid]*V[byid];
+}
 
 void computeSource(double S[], double U[], double thetc[], constants C)
 {
@@ -117,8 +250,9 @@ void MUSCL(double lout[], double rout[], double bout[], double tout[], double Ul
         }
       }
 
-      // check if cell is bot or top side
-      // THIS WORKS 
+      ////////////////////////////////////////
+      /// check if cell is b t l r side    ///
+      ////////////////////////////////////////
       if(i < 2) // on the bottom
         if(i == 0) // on the very bottom
           for(int k = 1; k >= 0; k--)
@@ -167,21 +301,19 @@ void MUSCL(double lout[], double rout[], double bout[], double tout[], double Ul
             for(int eq = 0; eq < NEQ; eq++)
               ULR[k*NEQ+eq] = Ur_g[eq+NEQ*(g+k-3)];
 
-         outputArray("output", "ULR", ULR, (sizeof ULR/sizeof *ULR), c);
-         /*
+      outputArray("output", "ULR", ULR, (sizeof ULR/sizeof *ULR), c);
+      /*
          outputArray("output", "UBT", UBT, (sizeof UBT/sizeof *UBT), c);
          */
 
       //outputArray("output", "ULR", ULR, (sizeof ULR/sizeof *ULR), c);
       for(int eq = 0; eq < NEQ; eq++)
       {
-
         int fi = 2; // left and bottom int 
 
         getThetaExtrap(theta_L, theta_R, ULR, fi, eq, C);
         getThetaExtrap(theta_B, theta_T, UBT, fi, eq, C);
 
-        /*
         lout[li*NEQ+eq]= ULR[NEQ*(fi-1)+eq] + 0.5*theta_L*(ULR[NEQ*(fi)+eq] - ULR[NEQ*(fi-1)+eq]);
 
         rout[li*NEQ+eq] = ULR[NEQ*(fi)+eq] - 0.5*theta_R*(ULR[NEQ*(fi+1)+eq] - ULR[NEQ*(fi)+eq]);
@@ -200,7 +332,6 @@ void MUSCL(double lout[], double rout[], double bout[], double tout[], double Ul
         bout[ti*NEQ+eq] = UBT[NEQ*(fi-1)+eq] + 0.5*theta_B*(UBT[NEQ*(fi)+eq] - UBT[NEQ*(fi-1)+eq]);
         tout[ti*NEQ+eq] = UBT[NEQ*(fi)+eq] - 0.5*theta_T*(UBT[NEQ*(fi+1)+eq] - UBT[NEQ*(fi)+eq]);
 
-        */
         //printf("c = %d, li = %d, ri = %d, bi = %d, ti = %d\n", c, li, ri, bi, ti);
       }
     }

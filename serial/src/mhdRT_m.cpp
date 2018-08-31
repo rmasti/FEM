@@ -87,7 +87,7 @@ int main (int argc, char * argv[])
   cons2Prim(Vr_g, Ur_g, (sizeof Vr_g/ sizeof *Vr_g));
 
   //outputArray(output, "Vr_g", Vr_g, (sizeof Vr_g/sizeof *Vr_g), 1);
-  
+/* FOR TESTING MUSCL  
   for(int i = 0; i <(sizeof Ur_g/ sizeof *Ur_g);  i++)
   {
     Ur_g[i] = double(i);
@@ -98,6 +98,7 @@ int main (int argc, char * argv[])
     Ub_g[i] = double(i);
     Ut_g[i] = double(i);
   }
+  */
   
   outputArray(output, "Ur_g", Ur_g, (sizeof Ur_g/sizeof *Ur_g), 0);
   outputArray(output, "Ul_g", Ul_g, (sizeof Ul_g/sizeof *Ul_g), 0);
@@ -105,15 +106,20 @@ int main (int argc, char * argv[])
   outputArray(output, "Ut_g", Ut_g, (sizeof Ut_g/sizeof *Ut_g), 0);
 
   cout << "MUSCL Extrapolation...." << endl;
-  double Ul[nx_v*C.ny_c]; double Ur[nx_v*C.ny_c]; // horiz dir
-  double Ub[ny_v*C.nx_c]; double Ut[ny_v*C.nx_c]; // vert dir
+  double Ul[nx_v*C.ny_c*NEQ]; double Ur[nx_v*C.ny_c*NEQ]; // horiz dir
+  double Ub[ny_v*C.nx_c*NEQ]; double Ut[ny_v*C.nx_c*NEQ]; // vert dir
   MUSCL(Ul, Ur, Ub, Ut, Ul_g, Ur_g, Ub_g, Ut_g, U, C);
 
 
   outputArray(output, "U", U,sizeof U/sizeof *U , 0);
 
-  double F[nx_v*C.ny_c]; double G[ny_v*C.nx_c];
-  //compute2dFlux(F, G, Ul, Ur, Ub, Ut, njx, njy, nix, niy, C);
+  cout << "Computing Fluxes...." << endl;
+  double F[nx_v*C.ny_c*NEQ]; double G[ny_v*C.nx_c*NEQ];
+  compute2dFlux(F, G, Ul, Ur, Ub, Ut, njx, njy, nix, niy, C);
+
+  cout << "Computing Residual...." << endl;
+  computeRes(Res, S, F, G, Aj, Ai, volume, C);
+  outputArray(output, "Res", Res,sizeof Res/sizeof *Res , 0);
 
   return 0;
 

@@ -50,6 +50,7 @@ using namespace std;
 #define bxid 5             // V5
 #define byid 6             // V5
 #define bzid 7             // V5
+#define RKORDER 4         //rkorder
 
 
 // CREATE STRUCTURE DEFINITION
@@ -149,6 +150,15 @@ void computeSource(double S[], double U[], double thetc[], constants C);
 void compute2dFlux(double F[], double G[], double Ul[], double Ur[], double Ub[], double Ut[], double njx[], double njy[], double nix[], double niy[], constants C);
 
 void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG);
+
+void fFlux(double F[],double U[]);
+
+void gFlux(double G[],double U[]);
+
+void computeRes(double Res[],double S[], double F[], double G[], double Aj[], double Ai[], double volume[], constants C);
+
+void rungeKutta(double U_RK[], double U[], double Res[], double volume[], double& dt, int& k, constants C);
+
 #endif
 
 
