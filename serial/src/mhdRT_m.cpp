@@ -62,22 +62,21 @@ int main (int argc, char * argv[])
   cout << "Initializing...." << endl;
   int nCsize = C.nx_c*C.ny_c*NEQ; // size of NEQ on all cells
   double V[nCsize];  // primitive variables
+  double V_RK[nCsize];  // primitive variables
   double U[nCsize];  // conserved variables
+  double U_RK[nCsize];  // conserved variables
   double Res[nCsize];// Residual 
   double S[nCsize];  // source terms rhou rhov and e wrt g
   initialize(V, rc, thetc, C);
-  dt = computeTimeStep(volume, Aj, Ai, njx, njy, nix, niy, V, C);
   prim2Cons(U, V, (sizeof U/sizeof *U));
-  computeSource(S, U, thetc, C);
+
 
   double Vl_g[C.num_ghost*C.ny_c*NEQ]; double Vr_g[C.num_ghost*C.ny_c*NEQ];
   double Vt_g[C.num_ghost*C.nx_c*NEQ]; double Vb_g[C.num_ghost*C.nx_c*NEQ];
   double Ul_g[C.num_ghost*C.ny_c*NEQ]; double Ur_g[C.num_ghost*C.ny_c*NEQ];
   double Ut_g[C.num_ghost*C.nx_c*NEQ]; double Ub_g[C.num_ghost*C.nx_c*NEQ];
 
-  cout << "Applying BC...." << endl;
   setBC(Vl_g, Vr_g, Vt_g, Vb_g, njx, njy, nix, niy, V, C);
-  //outputArray(output, "Vr_g", Vr_g, (sizeof Vr_g/sizeof *Vr_g), 0);
 
   prim2Cons(Ul_g, Vl_g, (sizeof Ul_g/ sizeof *Ul_g));
   prim2Cons(Ur_g, Vr_g, (sizeof Ur_g/ sizeof *Ur_g));
@@ -86,47 +85,60 @@ int main (int argc, char * argv[])
 
   cons2Prim(Vr_g, Ur_g, (sizeof Vr_g/ sizeof *Vr_g));
 
-  //outputArray(output, "Vr_g", Vr_g, (sizeof Vr_g/sizeof *Vr_g), 1);
-/* FOR TESTING MUSCL  
-  for(int i = 0; i <(sizeof Ur_g/ sizeof *Ur_g);  i++)
-  {
-    Ur_g[i] = double(i);
-    Ul_g[i] = double(i); 
-  }
-  for(int i = 0; i <(sizeof Ut_g/ sizeof *Ut_g);  i++)
-  {
-    Ub_g[i] = double(i);
-    Ut_g[i] = double(i);
-  }
-  */
-  
-  outputArray(output, "Ur_g", Ur_g, (sizeof Ur_g/sizeof *Ur_g), 0);
-  outputArray(output, "Ul_g", Ul_g, (sizeof Ul_g/sizeof *Ul_g), 0);
-  outputArray(output, "Ub_g", Ub_g, (sizeof Ub_g/sizeof *Ub_g), 0);
-  outputArray(output, "Ut_g", Ut_g, (sizeof Ut_g/sizeof *Ut_g), 0);
-
-  cout << "MUSCL Extrapolation...." << endl;
   double Ul[nx_v*C.ny_c*NEQ]; double Ur[nx_v*C.ny_c*NEQ]; // horiz dir
   double Ub[ny_v*C.nx_c*NEQ]; double Ut[ny_v*C.nx_c*NEQ]; // vert dir
-  MUSCL(Ul, Ur, Ub, Ut, Ul_g, Ur_g, Ub_g, Ut_g, U, C);
-
-
-  outputArray(output, "U", U,sizeof U/sizeof *U , 0);
-
-  cout << "Computing Fluxes...." << endl;
   double F[nx_v*C.ny_c*NEQ]; double G[ny_v*C.nx_c*NEQ];
-  compute2dFlux(F, G, Ul, Ur, Ub, Ut, njx, njy, nix, niy, C);
 
-  cout << "Computing Residual...." << endl;
-  computeRes(Res, S, F, G, Aj, Ai, volume, C);
-  outputArray(output, "Res", Res,sizeof Res/sizeof *Res , 0);
+  double tend = 0.6;
+  double t = 0;
+
+  dt = computeTimeStep(volume, Aj, Ai, njx, njy, nix, niy, V, C);
+
+  copy(U_RK, U, nCsize);
+  int tind = 0;
+  while (t < tend)
+  {
+    cout << " t = " << t << endl;
+    for (int k = 0; k < RKORDER; k++)
+    {
+      computeSource(S, U, thetc, C);
+
+      MUSCL(Ul, Ur, Ub, Ut, Ul_g, Ur_g, Ub_g, Ut_g, U, C);
+
+      compute2dFlux(F, G, Ul, Ur, Ub, Ut, njx, njy, nix, niy, C);
+
+      computeRes(Res, S, F, G, Aj, Ai, volume, C);
+
+      rungeKutta(U_RK, U, Res, volume, dt, k, C);
+
+      cons2Prim(V_RK, U_RK, nCsize);
+
+      setBC(Vl_g, Vr_g, Vt_g, Vb_g, njx, njy, nix, niy, V_RK, C);
+      prim2Cons(Ul_g, Vl_g, (sizeof Ul_g/ sizeof *Ul_g));
+      prim2Cons(Ur_g, Vr_g, (sizeof Ur_g/ sizeof *Ur_g));
+      prim2Cons(Ut_g, Vt_g, (sizeof Ut_g/ sizeof *Ut_g));
+      prim2Cons(Ub_g, Vb_g, (sizeof Ub_g/ sizeof *Ub_g));
+    }
+
+    copy(U, U_RK, nCsize);
+    copy(V, V_RK, nCsize);
+    
+    dt = computeTimeStep(volume, Aj, Ai, njx, njy, nix, niy, V, C);
+
+
+    outputArray(output, "U", U, (sizeof U/sizeof *U), tind);
+
+    tind++;
+    t = t+dt;
+  }
+
+
 
   return 0;
-
 }
 
 /*
-  outputArray(output, "S", S, (sizeof S/sizeof *S), 0);
+   outputArray(output, "S", S, (sizeof S/sizeof *S), 0);
 //outputArray(output, "V", V, (sizeof V/sizeof *V), 0);
 //outputArray(output, "Vl_g", Vl_g, (sizeof Vl_g/sizeof *Vl_g), 0);
 //outputArray(output, "U", U, (sizeof U/sizeof *U), 0);

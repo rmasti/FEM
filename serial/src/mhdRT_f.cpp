@@ -1,5 +1,7 @@
 # include "mhdRT.hpp"
 
+
+
 void rungeKutta(double U_RK[], double U[], double Res[], double volume[], double& dt, int& k, constants C)
 {
   double a[4];
@@ -127,7 +129,7 @@ void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& ny
   }
   else
   {
-    cerr << "ERROR: You fluxed up" << endl;
+    cerr << "ERROR: Wrong index for direction" << endl;
     exit(-1);
   }
 
@@ -142,10 +144,9 @@ void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& ny
       F[eq] = (lambdaB*FA[eq] - lambdaA*FB[eq]+lambdaA*lambdaB*(UB[eq]-UA[eq]))/(lambdaB-lambdaA);
   else
   {
-    cerr << "ERROR: You fluxed up 2" << endl;
+    cerr << "ERROR: HLL Flux Calculation Lambda Unphysical" << endl;
     exit(-1);
   }
-
 }
 void fFlux(double F[], double U[])
 {
@@ -936,6 +937,12 @@ double SIGN(double a, double b)
     return -a;
   else
     return a;
+}
+
+void copy(double Out[], double In[], int size)
+{
+  for(int i = 0; i < size; i++)
+    Out[i] = In[i];
 }
 
 /*

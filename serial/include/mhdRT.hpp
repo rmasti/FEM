@@ -159,6 +159,8 @@ void computeRes(double Res[],double S[], double F[], double G[], double Aj[], do
 
 void rungeKutta(double U_RK[], double U[], double Res[], double volume[], double& dt, int& k, constants C);
 
+void copy(double Out[], double In[], int size);
+
 #endif
 
 
