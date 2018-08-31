@@ -1,8 +1,89 @@
 # include "mhdRT.hpp"
 
+void compute2dFlux(double F[], double G[], double Ul[], double Ur[], double Ub[], double Ut[], double njx[], double njy[], double nix[], double niy[], constants C)
+{
+  double UL_L[NEQ], UR_L[NEQ], UB_B[NEQ], UT_B[NEQ];
+  double UL_R[NEQ], UR_R[NEQ], UB_T[NEQ], UT_T[NEQ];
+  double FLUX[NEQ];
+  int nx = C.nx_c+1;
+  int ri, li, bi, ti;
+  for(int i = 0; i < C.ny_c; i++)
+  {
+    for(int j = 0; j < C.nx_c; j++)
+    {
+      int c = i*C.nx_c + j;
+      li = i*(nx)+j;
+      ri = i*(nx)+j+1;
+      ti = (i+1)*(C.nx_c)+j;
+      bi = (i)*C.nx_c+j;
+
+      for(int eq = 0; eq < NEQ; eq++)
+      {
+
+        // left and bottom faces
+        UL_L[eq] = Ul[li*NEQ+eq]; UR_L[eq] = Ur[li*NEQ+eq];
+        UB_B[eq] = Ub[bi*NEQ+eq]; UT_B[eq] = Ut[bi*NEQ+eq];
+
+        // right and top faces
+        UL_R[eq] = Ul[ri*NEQ+eq]; UR_R[eq] = Ur[ri*NEQ+eq];
+        UB_T[eq] = Ub[ti*NEQ+eq]; UT_T[eq] = Ut[ti*NEQ+eq];
+
+      }
+      cout << endl;
+      //printf("c = %d, li = %d, ri = %d, bi = %d, ti = %d\n", c, li, ri, bi, ti);
+
+      computeFlux(FLUX, UL_L, UR_R, njx[li], njy[li], 0);
+      
+      //cout << FLUX[0] << " " << endl;
+
+    
+/*
+      CR = computeMaxSpeed(UR); CL = computeMaxSpeed(UL);
+      CB = computeMaxSpeed(UB); CL = computeMaxSpeed(UT);
+      u_L = (UL[cneq+uid]*njx[li] + UL[cneq+vid]*njy[li])/UL[cneq+rhoid]; 
+      u_R = (UR[cneq+uid]*njx[li] + UR[cneq+vid]*njy[li])/UR[cneq+rhoid]; 
+      */
+
+    }
+  }
+}
+
+void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG)
+{
+  for(int eq = 0; eq < NEQ ; eq++)
+  {
+    //printf("UA[%d] = %lf, ", eq, UA[eq]);
+  
+  
+  }
+  //cout << endl;
+  double CA = computeMaxSpeed(UA);
+  double CB = computeMaxSpeed(UB);
+ // cout << CA << " " << CB << endl;
+
+}
+
+
+void computeSource(double S[], double U[], double thetc[], constants C)
+{
+  // rt source term rho u rho v rho uu rho vv
+  double g = C.g;
+  for(int i = 0; i < C.ny_c; i++)
+  {
+    for(int j = 0; j < C.nx_c; j++)
+    {    
+      int c = i*C.nx_c + j;
+      int cneq = c*NEQ;
+      S[cneq+uid] = U[cneq+rhoid]*g*cos(thetc[c]);//rho g costhet u src 
+      S[cneq+vid] = U[cneq+rhoid]*g*sin(thetc[c]);//rho g sinthet v src
+      S[cneq+pid]=g*(U[cneq+uid]*cos(thetc[c])+U[cneq+vid]*sin(thetc[c])); 
+    }
+  }
+}
 
 void MUSCL(double Ul[], double Ur[], double Ub[], double Ut[], double Ul_g[], double Ur_g[], double Ub_g[], double Ut_g[], double U[], constants C)
 {
+
   int nx = C.nx_c + 1;
   int ny = C.ny_c + 1;
   double ULR[NEQ*5]; //5 point stencil
@@ -16,11 +97,9 @@ void MUSCL(double Ul[], double Ur[], double Ub[], double Ut[], double Ul_g[], do
   // left right top bottom
   for(int i = 0; i < C.ny_c; i++)
   {
-    int g = i*C.num_ghost;
-
     for(int j = 0; j < C.nx_c; j++)
     {
-
+      int g = i*C.num_ghost;
       int gv = j*C.num_ghost;
       int c = i*C.nx_c + j;
       li = i*(nx)+j;
@@ -36,14 +115,12 @@ void MUSCL(double Ul[], double Ur[], double Ub[], double Ut[], double Ul_g[], do
           ULR[k*NEQ+eq] = U[(c+k-2)*NEQ+eq]; // get initial lr
           UBT[k*NEQ+eq] = U[(c+(k-2)*C.nx_c)*NEQ+eq]; // get initial tb
         }
-        //cout << c << " " <<(c+k-2) << " "<< (c+(k-2)*C.nx_c)<< endl;
       }
 
       // check if cell is bot or top side
+      // THIS WORKS 
       if(i < 2) // on the bottom
-      {
-
-        if(i - 1 < 0) // on the very bottom
+        if(i == 0) // on the very bottom
           for(int k = 1; k >= 0; k--)
             for(int eq = 0; eq < NEQ; eq++)
               UBT[k*NEQ+eq] = Ub_g[(gv+(1-k))*NEQ+eq];
@@ -51,58 +128,86 @@ void MUSCL(double Ul[], double Ur[], double Ub[], double Ut[], double Ul_g[], do
           for(int eq = 0; eq < NEQ; eq++)
           {
             int k = 0;
-            //cout << c << " " << k*NEQ+eq << " " << (gv+k)*NEQ+eq << endl;
             UBT[k*NEQ+eq] = Ub_g[(gv+k)*NEQ+eq];
           }
-      }
-      else if( i >= C.ny_c-2) // top side
+
+      if(j < 2) // on the left
       {
-        if(i-(C.ny_c-1) < 0) // top side 2 layers in
+        if(j == 0) // on left side 1st cell
+        {
+          for(int k = 1; k >= 0; k--)
+          {
+            for(int eq = 0; eq < NEQ; eq++)
+            {
+              ULR[k*NEQ+eq] = Ul_g[(g+(1-k))*NEQ+eq];
+            }
+            printf("c = %d, ulrC = %d, gc = %d , Urho[gc] = %lf\n", c, k, (g+(1-k))*NEQ, Ul_g[159]);
+          }
+        }
+        else       // on left side second cell
+        {
+          for(int eq = 0; eq < NEQ; eq++)
+          {
+            int k = 0; 
+            ULR[k*NEQ+eq] = Ul_g[(g+k)*NEQ+eq];
+          }
+        }
+      }
+
+
+
+
+      if( i >= C.ny_c-2) // top side
+      {
+        if( i == C.ny_c-2) // top side 2 layers in
         {
           int k = 4;
           for(int eq=0; eq < NEQ; eq++)
             UBT[k*NEQ+eq] = Ut_g[eq+NEQ*(gv+k-4)];
         }
         else
+        {
           for(int k = 3; k < 5; k++)
             for(int eq = 0; eq < NEQ; eq++)
-              ULR[k*NEQ+eq] = Ut_g[eq+NEQ*(gv+k-3)];
+              UBT[k*NEQ+eq] = Ut_g[eq+NEQ*(gv+k-3)];
+        }
       }
 
-      if(j < 2) //check if cell on left or right side
-      {
 
-        if(j-1 < 0) // on left side 1st cell
-          for(int k = 1; k >= 0; k--)
-            for(int eq = 0; eq < NEQ; eq++)
-              ULR[k*NEQ+eq] = Ul_g[(g+(1-k))*NEQ+eq];
-        //cout << k*NEQ+eq <<  " "<< (g+(1-k))*NEQ+eq << endl;
-        //ULR[k*NEQ+eq] = Ul_g[(g+k)*NEQ+eq];
-        else       // on left side second cell
-          for(int eq = 0; eq < NEQ; eq++)
-          {
-            int k = 0; 
-            ULR[k*NEQ+eq] = Ul_g[(g+k)*NEQ+eq];
-          }
-      }
-      else if( j >= C.nx_c-2) // on right side
+      if( j >= C.nx_c-2) // on right side
       {
 
         if(j-(C.nx_c-1) < 0)// on right side 2 cells in 
         {
+
+          //cout << c <<" " << j <<  endl;
+
           int k = 4;
           for(int eq=0; eq < NEQ; eq++)
+          {
+            //cout <<k*NEQ+eq << " " << Ur_g[eq+NEQ*(g+k-4)]<< endl;
             ULR[k*NEQ+eq] = Ur_g[eq+NEQ*(g+k-4)];
+          }
         }
         else // on right side 1 cell in
+        {
           for(int k = 3; k < 5; k++)
             for(int eq = 0; eq < NEQ; eq++)
               ULR[k*NEQ+eq] = Ur_g[eq+NEQ*(g+k-3)];
-        //cout << k*NEQ+eq << " " <<eq+NEQ*(g+k-3) << endl;
+              //printf("k = %d, val g = %d\n", k, (g+k-3));
+              //cout << " " <<Ur_g[eq+NEQ*(g+k-3)] << endl;
+        }
       }
 
+
+      outputArray("output", "ULR", ULR, (sizeof ULR/sizeof *ULR), c);
+      //outputArray("output", "ULR", ULR, (sizeof ULR/sizeof *ULR), c);
+      outputArray("output", "UBT", UBT, (sizeof UBT/sizeof *UBT), c);
+ 
+      //outputArray("output", "ULR", ULR, (sizeof ULR/sizeof *ULR), c);
       for(int eq = 0; eq < NEQ; eq++)
       {
+
         int fi = 2; // left and bottom int 
         
         getThetaExtrap(theta_L, theta_R, ULR, fi, eq, C);
@@ -281,6 +386,8 @@ void setBC(double Vl_g[], double Vr_g[], double Vt_g[], double Vb_g[], double nj
           int lInt = i*C.nx_c + j;
           int rInt = i*(C.nx_c) + (C.nx_c-1) - j;
           int g = i*C.num_ghost+j;
+          
+          //printf("lInt = %d, rInt = %d, g = %d\n", lInt, rInt, g);
 
           for(int eq = 0; eq < NEQ; eq++)
           {
@@ -398,7 +505,7 @@ void initialize(
       double rhoL = 1.0;
       double rhoH = 2.0;
       double p0 = 2.5;
-      double g = 0.1;
+      double g = C.g;
       double vPert = 0.01;
       double bparr0 = 0.0*sqrt(4.0*PI);
       double circ = 2.0*PI*0.375;

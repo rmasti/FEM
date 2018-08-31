@@ -10,7 +10,7 @@ CC	= g++
 LD	= g++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(addprefix -I, $(HDRDIR)) -O3 #-std=c++0x
+CFLAGS = $(addprefix -I, $(HDRDIR)) -O3 -std=c++0x
 #-fno-exceptions
 # link flags to be used 
 LDFLAGS	= $(addprefix -I, $(HDRDIR)) -L. $(addprefix -L, $(LIBDIR)) -O3

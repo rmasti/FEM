@@ -5,8 +5,9 @@ int main (int argc, char * argv[])
   // Create the structure constants to contain info needed on all processors
   constants C;
   C.f_limiter = 6;
-  C.num_ghost = 3;
+  C.num_ghost = 2;
   C.cfl = 0.5;
+  C.g = 0.1;
   C.nmax = 300;
   C.wint = 50;
   C.pint = 50;
@@ -66,8 +67,8 @@ int main (int argc, char * argv[])
   double S[nCsize];  // source terms rhou rhov and e wrt g
   initialize(V, rc, thetc, C);
   dt = computeTimeStep(volume, Aj, Ai, njx, njy, nix, niy, V, C);
-  //cout << dt << endl;
   prim2Cons(U, V, (sizeof U/sizeof *U));
+  computeSource(S, U, thetc, C);
 
   double Vl_g[C.num_ghost*C.ny_c*NEQ]; double Vr_g[C.num_ghost*C.ny_c*NEQ];
   double Vt_g[C.num_ghost*C.nx_c*NEQ]; double Vb_g[C.num_ghost*C.nx_c*NEQ];
@@ -76,21 +77,54 @@ int main (int argc, char * argv[])
 
   cout << "Applying BC...." << endl;
   setBC(Vl_g, Vr_g, Vt_g, Vb_g, njx, njy, nix, niy, V, C);
-  prim2Cons(Ul_g, Vl_g, (sizeof Ul_g/ sizeof *Ul_g));
-  prim2Cons(Ur_g, Vr_g, (sizeof Ur_g/ sizeof *Ur_g));
-  prim2Cons(Ut_g, Vt_g, (sizeof Ut_g/ sizeof *Ut_g));
-  prim2Cons(Ub_g, Vb_g, (sizeof Ub_g/ sizeof *Ub_g));
+  //outputArray(output, "Vr_g", Vr_g, (sizeof Vr_g/sizeof *Vr_g), 0);
+
+  prim2Cons(Ul_g, Vl_g, C.num_ghost*C.ny_c*NEQ);
+  prim2Cons(Ur_g, Vr_g, C.num_ghost*C.ny_c*NEQ);
+  prim2Cons(Ut_g, Vt_g, C.num_ghost*C.nx_c*NEQ);
+  prim2Cons(Ub_g, Vb_g, C.num_ghost*C.nx_c*NEQ);
+
+  cons2Prim(Vr_g, Ur_g, C.num_ghost*C.ny_c*NEQ);
+
+  //outputArray(output, "Vr_g", Vr_g, (sizeof Vr_g/sizeof *Vr_g), 1);
+  
+  for(int i = 0; i <(sizeof Ur_g/ sizeof *Ur_g);  i++)
+  {
+    Ur_g[i] = double(i);
+    Ul_g[i] = double(i); 
+  }
+  for(int i = 0; i <(sizeof Ut_g/ sizeof *Ut_g);  i++)
+  {
+    Ub_g[i] = double(i);
+    Ut_g[i] = double(i);
+  }
+  
+  outputArray(output, "Ur_g", Ur_g, (sizeof Ur_g/sizeof *Ur_g), 0);
+  outputArray(output, "Ul_g", Ul_g, (sizeof Ul_g/sizeof *Ul_g), 0);
+  outputArray(output, "Ub_g", Ub_g, (sizeof Ub_g/sizeof *Ub_g), 0);
+  outputArray(output, "Ut_g", Ut_g, (sizeof Ut_g/sizeof *Ut_g), 0);
+
+  cout <<int  (sizeof Ul_g/sizeof *Ul_g) << endl;
 
   cout << "MUSCL Extrapolation...." << endl;
   double Ul[nx_v*C.ny_c]; double Ur[nx_v*C.ny_c]; // horiz dir
   double Ub[ny_v*C.nx_c]; double Ut[ny_v*C.nx_c]; // vert dir
+ // MUSCL(Ul, Ur, Ub, Ut, Ul_g, Ur_g, Ub_g, Ut_g, U, C);
+
   MUSCL(Ul, Ur, Ub, Ut, Ul_g, Ur_g, Ub_g, Ut_g, U, C);
+
+
+  outputArray(output, "U", U,sizeof U/sizeof *U , 0);
+
+  double F[nx_v*C.ny_c]; double G[ny_v*C.nx_c];
+  //compute2dFlux(F, G, Ul, Ur, Ub, Ut, njx, njy, nix, niy, C);
 
   return 0;
 
 }
 
 /*
+  outputArray(output, "S", S, (sizeof S/sizeof *S), 0);
 //outputArray(output, "V", V, (sizeof V/sizeof *V), 0);
 //outputArray(output, "Vl_g", Vl_g, (sizeof Vl_g/sizeof *Vl_g), 0);
 //outputArray(output, "U", U, (sizeof U/sizeof *U), 0);

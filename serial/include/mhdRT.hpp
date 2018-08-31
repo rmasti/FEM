@@ -59,7 +59,8 @@ struct constants
   int f_mesh;              // Which mesh to use
   int f_case;              // Which case to run
   int num_ghost;           // Number of ghost layers
-  double cfl;                 // Number of ghost layers
+  double cfl;              // Number of ghost layers
+  double g;                // gravity
   int nmax;                // Maximum interation number
   int wint;                // Write Interval
   int pint;                // Print Interval
@@ -142,6 +143,12 @@ double limiter(double& r, constants C);
 
 void getThetaExtrap(double& theta_A, double& theta_B, double U5[], int& ind, int& eq, constants& C);
 
+void computeSource(double S[], double U[], double thetc[], constants C);
+
+
+void compute2dFlux(double F[], double G[], double Ul[], double Ur[], double Ub[], double Ut[], double njx[], double njy[], double nix[], double niy[], constants C);
+
+void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG);
 #endif
 
 
