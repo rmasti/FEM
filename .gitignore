@@ -11,3 +11,4 @@
 *.snm
 *.vrb
 *.nav
+eigen/*
