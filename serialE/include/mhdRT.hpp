@@ -17,7 +17,7 @@
 #include <cstring>
 
 #include "stdio.h"
-#include "mpi.h"
+//#include "mpi.h"
 
 #include <Eigen/Dense>
 
@@ -84,7 +84,7 @@ void extrapCopyCoords(MatrixXd& xc_g, MatrixXd& yc_g, const MatrixXd& xc, const 
 
 void computeArea(MatrixXd& Ai, MatrixXd& Aj, const MatrixXd& xn, const MatrixXd& yn);
 
-void computeNormalVectors(MatrixXd& n_i_xhat, MatrixXd& n_i_yhat, MatrixXd& n_j_xhat, MatrixXd& n_j_yhat, const MatrixXd& xn, const MatrixXd& yn, const MatrixXd& Ai, const MatrixXd& Aj);
+void computeNormalVectors(MatrixXd& nix, MatrixXd& niy, MatrixXd& njx, MatrixXd& njy, const MatrixXd& xn, const MatrixXd& yn, const MatrixXd& Ai, const MatrixXd& Aj);
 
 void computeVolume(MatrixXd& Volume, const MatrixXd& xn, const MatrixXd& yn);
 
@@ -95,16 +95,16 @@ void outputArrayMap(string Address, string FileName, const Map2Eigen* out, int n
 
 void initialize(Map2Eigen* V, const MatrixXd& xc_g, const MatrixXd& yc_g, constants C);
 
-void setBC(Map2Eigen* V, const MatrixXd& n_i_xhat, const MatrixXd& n_i_yhat, const MatrixXd& n_j_xhat, const MatrixXd& n_j_yhat, MatrixXd& T, constants C);
+void setBC(Map2Eigen* V, const MatrixXd& nix, const MatrixXd& niy, const MatrixXd& njx, const MatrixXd& njy, MatrixXd& T, constants C);
 
-void slipwallBC(Map2Eigen* V, const int Begin[], const int End[], const MatrixXd& n_i_xhat, const MatrixXd& n_i_yhat, const MatrixXd& n_j_xhat, const MatrixXd& n_j_yhat, MatrixXd& T, constants C);
+void slipwallBC(Map2Eigen* V, const int Begin[], const int End[], const MatrixXd& nix, const MatrixXd& niy, const MatrixXd& njx, const MatrixXd& njy, MatrixXd& T, constants C);
 
 
 void primToCons(Map2Eigen* U, const Map2Eigen* V);
 void consToPrim(Map2Eigen* V, const Map2Eigen* U);
 void cons2Prim(double V[],double U[],int size);
 
-double computeTimeStep(MatrixXd& Volume, MatrixXd& Ai, MatrixXd& Aj, MatrixXd& n_i_xhat,  MatrixXd& n_i_yhat, MatrixXd& n_j_xhat,  MatrixXd& n_j_yhat, Map2Eigen* V, constants C);
+double computeTimeStep(MatrixXd& Volume, MatrixXd& Ai, MatrixXd& Aj, MatrixXd& nix,  MatrixXd& niy, MatrixXd& njx,  MatrixXd& njy, Map2Eigen* V, constants C);
 
 
 double computeMaxSpeed(double V[]); 
@@ -118,7 +118,7 @@ double SIGN(double a, double b);
 double limiter(double& r, constants C);
 
 
-void compute2dFlux(Map2Eigen* F, Map2Eigen* G, const Map2Eigen* U_L , const Map2Eigen* U_R, const Map2Eigen* U_B, const Map2Eigen* U_T, MatrixXd& n_j_xhat, MatrixXd& n_j_yhat, MatrixXd& n_i_xhat, MatrixXd& n_i_yhat, constants C);
+void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L , Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T, MatrixXd& njx, MatrixXd& njy, MatrixXd& nix, MatrixXd& niy, constants C);
 
 void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG);
 

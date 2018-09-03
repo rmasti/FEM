@@ -56,33 +56,31 @@ int main (int argc, char * argv[])
 
   int ncols = xc.cols()+2*C.num_ghost;
   int nrows = xc.rows()+2*C.num_ghost;
-  
 
 
+  MatrixXd T(nrows, ncols); // temperature
   // Direction independent
   //
   //
   // YANG YANG YANG YANG YANG THE 2 LINES BELOW
   //
   //
-  Map2Eigen *U    = new Map2Eigen(nrows, ncols, NEQ);
-  cout << sizeof U->Q_raw << sizeof(double) << " " << nrows*ncols*NEQ << endl;
+  Map2Eigen *U = new Map2Eigen(nrows, ncols, NEQ);
   Map2Eigen *U_RK = new Map2Eigen(nrows, ncols, NEQ);
   Map2Eigen *V    = new Map2Eigen(nrows, ncols, NEQ);
 
-  Map2Eigen *S    = new Map2Eigen(xc.rows(), xc.cols(), NEQ);
-  
-  Map2Eigen *Res  = new Map2Eigen(xc.rows(), xc.cols(), NEQ);
-  MatrixXd T(xc_g.rows(), xc_g.cols()); // temperature
-
+  int njc = xc.rows();
+  int nic = xc.cols();
+  Map2Eigen *S    = new Map2Eigen(njc, nic, NEQ);
+  Map2Eigen *Res  = new Map2Eigen(njc, nic, NEQ);
   //Direction dependent
-  Map2Eigen *F    = new Map2Eigen(xc.rows(), xn.cols(), NEQ);
-  Map2Eigen *U_L  = new Map2Eigen(xc.rows(), xn.cols(), NEQ);
-  Map2Eigen *U_R  = new Map2Eigen(xc.rows(), xn.cols(), NEQ);
+  Map2Eigen *F    = new Map2Eigen(njc, nic+1, NEQ);
+  Map2Eigen *U_L  = new Map2Eigen(njc, nic+1, NEQ);
+  Map2Eigen *U_R  = new Map2Eigen(njc, nic+1, NEQ);
 
-  Map2Eigen *G    = new Map2Eigen(xn.rows(), xc.cols(), NEQ);
-  Map2Eigen *U_T  = new Map2Eigen(xn.rows(), xc.cols(), NEQ);
-  Map2Eigen *U_B  = new Map2Eigen(xn.rows(), xc.cols(), NEQ);
+  Map2Eigen *G    = new Map2Eigen(njc+1, nic, NEQ);
+  Map2Eigen *U_T  = new Map2Eigen(njc+1, nic, NEQ);
+  Map2Eigen *U_B  = new Map2Eigen(njc+1, nic, NEQ);
 
 
   ////////////////// INITIALIZE //////////////////
@@ -107,6 +105,7 @@ int main (int argc, char * argv[])
   outputArray(outputFolder, "yc", yc, 0);
 
  // cout << U_B->Q[rhoid] << endl;
+ 
   MUSCL(U_L, U_R, U_B, U_T, U, C);
 
 

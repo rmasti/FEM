@@ -6,13 +6,13 @@ LIBDIR	= ./lib  ../eigen
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
-#CC	= g++
-#LD	= g++
-CC = mpic++
-LD = mpic++
+CC	= g++
+LD	= g++
+#CC = mpic++
+#LD = mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(addprefix -I, $(HDRDIR)) -O3 -std=c++0x
+CFLAGS = $(addprefix -I, $(HDRDIR)) -O3 -std=c++0x -g3
 #-fno-exceptions
 # link flags to be used 
 LDFLAGS	= $(addprefix -I, $(HDRDIR)) -L. $(addprefix -L, $(LIBDIR)) -O3

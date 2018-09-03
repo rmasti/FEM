@@ -8,7 +8,7 @@
 # include "mhdRT.hpp"
 
 
-void compute2dFlux(Map2Eigen* F, Map2Eigen* G, const Map2Eigen* U_L , const Map2Eigen* U_R, const Map2Eigen* U_B, const Map2Eigen* U_T, MatrixXd& n_j_xhat, MatrixXd& n_j_yhat, MatrixXd& n_i_xhat, MatrixXd& n_i_yhat, constants C)
+void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R,  Map2Eigen* U_B,  Map2Eigen* U_T, MatrixXd& njx, MatrixXd& njy, MatrixXd& nix, MatrixXd& niy, constants C)
 {
   int nj = F->Q[rhoid].rows();
   int ni = G->Q[rhoid].cols();
@@ -22,17 +22,19 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G, const Map2Eigen* U_L , const Map2
     {
       for(int eq = 0; eq < NEQ; eq++)
       {
+        cout << j << " " << i <<endl;
         ul[eq] = U_L->Q[eq](j,i);
         ur[eq] = U_R->Q[eq](j,i);
         ub[eq] = U_B->Q[eq](j,i);
         ut[eq] = U_T->Q[eq](j,i);
       }
-      computeFlux(FFLUX, ul, ur, n_j_xhat(j,i), n_j_yhat(j,i), 0);
-      computeFlux(GFLUX, ub, ut, n_i_xhat(j,i), n_i_yhat(j,i), 1);
+
+      computeFlux(FFLUX, ul, ur, njx(j,i), njy(j,i), 0);
+      computeFlux(GFLUX, ub, ut, nix(j,i), niy(j,i), 1);
       for(int eq = 0; eq < NEQ; eq++)
       {
-        F->Q_raw[(j*ni+i)*NEQ+eq] = FFLUX[eq];
-        G->Q_raw[(j*ni+i)*NEQ+eq] = GFLUX[eq];
+        F->Q[eq](j,i) = FFLUX[eq];
+        G->Q[eq](j,i) = GFLUX[eq];
       }
     }
   }
@@ -46,7 +48,7 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G, const Map2Eigen* U_L , const Map2
         ur[eq] = U_R->Q[eq](j,ni);
 
       }
-      computeFlux(FFLUX, ul, ur, n_j_xhat(j,ni), n_j_yhat(j,ni), 0);
+      computeFlux(FFLUX, ul, ur, njx(j,ni), njy(j,ni), 0);
       for(int eq = 0; eq < NEQ; eq++)
         F->Q[eq](j,ni) = FFLUX[eq];
   }
@@ -60,7 +62,7 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G, const Map2Eigen* U_L , const Map2
         ut[eq] = U_T->Q[eq](nj,i);
  
       }
-      computeFlux(GFLUX, ub, ut, n_i_xhat(nj,i), n_i_yhat(nj,i), 1);
+      computeFlux(GFLUX, ub, ut, nix(nj,i), niy(nj,i), 1);
       for(int eq = 0; eq < NEQ; eq++)
         G->Q[eq](nj,i) = GFLUX[eq];
   }
@@ -102,7 +104,6 @@ void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& ny
   }
 
   //for(int eq=0; eq < NEQ; eq++)
-   // cout << "Fa = " << FA[eq] << " Fb = " << FB[eq] << endl;
   if (lambdaA > 0)
     for(int eq = 0; eq < NEQ; eq++)
       F[eq] = FA[eq];
@@ -173,6 +174,7 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
 {
   int ni = U_B->Q[rhoid].cols(); //ncx
   int nj = U_L->Q[rhoid].rows();//ncy
+  cout << ni << " " << nj << endl;
 
   int ig, jg;
   double theta_L, theta_B, theta_R, theta_T;
@@ -188,8 +190,6 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
   printf("\n nj = %ld, ni = %ld \n", U_T->Q[rhoid].rows(), U_T->Q[rhoid].cols());
   printf("\n nj = %ld, ni = %ld \n", U->Q[rhoid].rows(), U->Q[rhoid].cols());
   */
-  cout << sizeof U_R->Q_raw << sizeof(double) << endl;
-    
   for(int j = 0; j < nj; j++)
   {
   
@@ -221,21 +221,21 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
         theta_B = limiter(r_B, C);
         theta_T = limiter(r_T, C);
 
-        //(U_R->Q_raw[(nj*i+j)*NEQ+eq]) = (U->Q[eq](jg,ig))-0.5*theta_R*((U->Q[eq](jg,ig+1))-(U->Q[eq](jg,ig)));             
-        (U_R->Q_raw[(j+i)*NEQ+eq]) = 100.0;
-
-        (U_T->Q_raw[(nj*i+j)*NEQ+eq]) =  (U->Q[eq](jg,ig))+0.5*theta_T*((U->Q[eq](jg+1,ig))-(U->Q[eq](jg,ig)));
+        U_R->Q[eq](j,i) = (U->Q[eq](jg,ig))-0.5*theta_R*((U->Q[eq](jg,ig+1))-(U->Q[eq](jg,ig)));             
+        //(U_R->Q_raw[(j+i)*NEQ+eq]) = 100.0;
         
-        (U_L->Q_raw[(nj*i+j)*NEQ+eq]) =  (U->Q[eq](jg,ig-1))+0.5*theta_L*((U->Q[eq](jg,ig))-(U->Q[eq](jg,ig-1)));
+        U_L->Q[eq](j,i) =  (U->Q[eq](jg,ig-1))+0.5*theta_L*((U->Q[eq](jg,ig))-(U->Q[eq](jg,ig-1)));
+        
+        U_T->Q[eq](j,i) = (U->Q[eq](jg,ig))+0.5*theta_T*((U->Q[eq](jg+1,ig))-(U->Q[eq](jg,ig)));
 
-        (U_B->Q_raw[(nj*i+j)*NEQ+eq]) =  (U->Q[eq](jg-1,ig))+0.5*theta_B*((U->Q[eq](jg,ig))-(U->Q[eq](jg-1,ig)));
+        U_B->Q_raw[(nj*i+j)*NEQ+eq] =  (U->Q[eq](jg-1,ig))+0.5*theta_B*((U->Q[eq](jg,ig))-(U->Q[eq](jg-1,ig)));
 
       }
     }
   }
-  cout << U_R->Q[rhoid] << endl;
 
   // add the last layer left right
+  //
   for(int j = 0; j < nj; j++)
   {
       ig = ni+C.num_ghost;
@@ -275,6 +275,7 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
         U_T->Q[eq](nj,i) = U->Q[eq](jg,ig)-0.5*theta_T*(U->Q[eq](jg+1,ig)-U->Q[eq](jg,ig));             
     }
   }
+
 }
 
 
@@ -315,10 +316,10 @@ double computeTimeStep(
     MatrixXd& Volume,      // input - volume of every cell
     MatrixXd& Ai,          // input - area in i dir 
     MatrixXd& Aj,          // input - area in j dir
-    MatrixXd& n_i_xhat,    // input - norm i dir x comp
-    MatrixXd& n_i_yhat,    // input - norm i dir y comp
-    MatrixXd& n_j_xhat,    // input - norm j dir x comp
-    MatrixXd& n_j_yhat,    // input - norm j dir y comp
+    MatrixXd& nix,    // input - norm i dir x comp
+    MatrixXd& niy,    // input - norm i dir y comp
+    MatrixXd& njx,    // input - norm j dir x comp
+    MatrixXd& njy,    // input - norm j dir y comp
     Map2Eigen* V,           // input - prim var for speeds
     constants C            // input - constants for the CFL number
     )
@@ -349,10 +350,10 @@ double computeTimeStep(
       i_c = left + i;
       j_c = bot + j;
       // get the avg norm vecs
-      ni_avg_xhat = 0.5*(n_i_xhat(j,i)+n_i_xhat(j,i+1));
-      ni_avg_yhat = 0.5*(n_i_yhat(j,i)+n_i_yhat(j,i+1));
-      nj_avg_xhat = 0.5*(n_j_xhat(j,i)+n_j_xhat(j+1,i));
-      nj_avg_yhat = 0.5*(n_j_yhat(j,i)+n_j_yhat(j+1,i));
+      ni_avg_xhat = 0.5*(nix(j,i)+nix(j,i+1));
+      ni_avg_yhat = 0.5*(niy(j,i)+niy(j,i+1));
+      nj_avg_xhat = 0.5*(njx(j,i)+njx(j+1,i));
+      nj_avg_yhat = 0.5*(njy(j,i)+njy(j+1,i));
 
       // get avg area
       Ai_avg = 0.5*(Ai(j,i) + Ai(j,i+1));
@@ -410,10 +411,10 @@ void slipwallBC(
     Map2Eigen* V,              // output - Prim var  
     const int Begin[],         // input - Beginning index coord
     const int End[],           // input - Ending index coord 
-    const MatrixXd& n_i_xhat,  // input - norm vec i dir x comp
-    const MatrixXd& n_i_yhat,  // input - norm vec i dir y comp
-    const MatrixXd& n_j_xhat,  // input - norm vec j dir x comp
-    const MatrixXd& n_j_yhat,  // input - norm vec j dir y comp
+    const MatrixXd& nix,  // input - norm vec i dir x comp
+    const MatrixXd& niy,  // input - norm vec i dir y comp
+    const MatrixXd& njx,  // input - norm vec j dir x comp
+    const MatrixXd& njy,  // input - norm vec j dir y comp
     MatrixXd& T,         // input - temperature at cells
     constants C                // input - constants for num ghosts
     )
@@ -459,8 +460,8 @@ void slipwallBC(
       {
         I = i_in_Begin + sign*1; // gives the first coln inside the ghost cell
         J = j_in_Begin; // this give first j index
-        nx = n_i_xhat(Begin[0]+j, BC_index); // get the normal vec comp in the xdir
-        ny = n_i_yhat(Begin[0]+j, BC_index); // get normal vec comp in the y dir
+        nx = nix(Begin[0]+j, BC_index); // get the normal vec comp in the xdir
+        ny = niy(Begin[0]+j, BC_index); // get normal vec comp in the y dir
         uvel = V->Q[uid](J+j, i_in_Begin - sign*i); // sign says okay push left for g
         vvel = V->Q[vid](J+j, i_in_Begin - sign*i); // or push right for g
         Temp = T(J+j, i_in_Begin - sign*i); // temperature 
@@ -503,8 +504,8 @@ void slipwallBC(
       {
         I = i_in_Begin;          // I is the looping dir
         J = j_in_Begin + sign*1; // j is the num ghost dir
-        nx = n_j_xhat(BC_index, Begin[1]+i);
-        ny = n_j_yhat(BC_index, Begin[1]+i);
+        nx = njx(BC_index, Begin[1]+i);
+        ny = njy(BC_index, Begin[1]+i);
         uvel = V->Q[uid](j_in_Begin - sign*j, I+i); // copy val
         vvel = V->Q[vid](j_in_Begin - sign*j, I+i); // copy val
         Temp = T(j_in_Begin - sign*j, I+i); // copy val
@@ -530,10 +531,10 @@ void slipwallBC(
 void setBC(
     // Apply BC for cases 2 and 3, God Help Me
     Map2Eigen* V,             // output - prim var
-    const MatrixXd& n_i_xhat, // input - norm vec i dir x comp
-    const MatrixXd& n_i_yhat, // input - norm vec i dir y comp
-    const MatrixXd& n_j_xhat, // input - norm vec j dir x comp
-    const MatrixXd& n_j_yhat, // input - norm vec j dir y comp
+    const MatrixXd& nix, // input - norm vec i dir x comp
+    const MatrixXd& niy, // input - norm vec i dir y comp
+    const MatrixXd& njx, // input - norm vec j dir x comp
+    const MatrixXd& njy, // input - norm vec j dir y comp
     MatrixXd& T,        // input - grab the temperature 
     constants C               // input - constants C for case
     )
@@ -553,11 +554,11 @@ void setBC(
   int Right_Begin[2]  = {0, ni-1};
   int Right_End[2]    = { nj-1,ni-1};
 
-  slipwallBC(V, Upper_Begin, Upper_End, n_i_xhat, n_i_yhat, n_j_xhat, n_j_yhat, T, C);
-  slipwallBC(V, Lower_Begin, Lower_End, n_i_xhat, n_i_yhat, n_j_xhat, n_j_yhat, T, C);
+  slipwallBC(V, Upper_Begin, Upper_End, nix, niy, njx, njy, T, C);
+  slipwallBC(V, Lower_Begin, Lower_End, nix, niy, njx, njy, T, C);
 
-  slipwallBC(V, Left_Begin, Left_End, n_i_xhat, n_i_yhat, n_j_xhat, n_j_yhat, T, C);
-  slipwallBC(V, Right_Begin, Right_End, n_i_xhat, n_i_yhat, n_j_xhat, n_j_yhat, T, C);
+  slipwallBC(V, Left_Begin, Left_End, nix, niy, njx, njy, T, C);
+  slipwallBC(V, Right_Begin, Right_End, nix, niy, njx, njy, T, C);
 
 }
 
@@ -661,10 +662,10 @@ void computeVolume(
 void computeNormalVectors(
     // This function takes in the previously calculated areas and
     // Finds the fraction in the x and y physical directions
-    MatrixXd& n_i_xhat,    // output - i with A of normal vector in x phys
-    MatrixXd& n_i_yhat,    // output - i comp but the yhat phys
-    MatrixXd& n_j_xhat,    // output - j with A of normal vector in x phys
-    MatrixXd& n_j_yhat,    // output - j dir but with yhat phys
+    MatrixXd& nix,    // output - i with A of normal vector in x phys
+    MatrixXd& niy,    // output - i comp but the yhat phys
+    MatrixXd& njx,    // output - j with A of normal vector in x phys
+    MatrixXd& njy,    // output - j dir but with yhat phys
     const MatrixXd& xn,    // input - nodal x coordinate
     const MatrixXd& yn,    // input - nodal y coordinate
     const MatrixXd& Ai,    // input - Area pointed in i (x square grid)
@@ -677,16 +678,16 @@ void computeNormalVectors(
     for (int j = 0; j < Ai.rows(); j++)
     {
       // See notes Sec 6 slide 75
-      n_i_xhat(j,i) = (yn(j+1,i) - yn(j,i)) / Ai(j,i); 
-      n_i_yhat(j,i) = -(xn(j+1,i) - xn(j,i)) / Ai(j,i);
+      nix(j,i) = (yn(j+1,i) - yn(j,i)) / Ai(j,i); 
+      niy(j,i) = -(xn(j+1,i) - xn(j,i)) / Ai(j,i);
     }
   }
   for (int i = 0; i < Aj.cols(); i++)
   {
     for (int j = 0; j < Aj.rows(); j++)
     {
-      n_j_xhat(j,i) = -(yn(j,i+1) - yn(j,i)) / Aj(j,i);
-      n_j_yhat(j,i) = (xn(j,i+1) - xn(j,i)) / Aj(j,i);
+      njx(j,i) = -(yn(j,i+1) - yn(j,i)) / Aj(j,i);
+      njy(j,i) = (xn(j,i+1) - xn(j,i)) / Aj(j,i);
     }
   }
 }
