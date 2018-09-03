@@ -29,8 +29,8 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
         ut[eq] = U_T->Q[eq](j,i);
       }
 
-      computeFlux(FFLUX, ul, ur, njx(j,i), njy(j,i), 0);
-      computeFlux(GFLUX, ub, ut, nix(j,i), niy(j,i), 1);
+      computeFlux(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
+      computeFlux(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
       for(int eq = 0; eq < NEQ; eq++)
       {
         F->Q[eq](j,i) = FFLUX[eq];
@@ -48,7 +48,8 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
         ur[eq] = U_R->Q[eq](j,ni);
 
       }
-      computeFlux(FFLUX, ul, ur, njx(j,ni), njy(j,ni), 0);
+
+      computeFlux(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
       for(int eq = 0; eq < NEQ; eq++)
         F->Q[eq](j,ni) = FFLUX[eq];
   }
@@ -62,7 +63,7 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
         ut[eq] = U_T->Q[eq](nj,i);
  
       }
-      computeFlux(GFLUX, ub, ut, nix(nj,i), niy(nj,i), 1);
+      computeFlux(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
       for(int eq = 0; eq < NEQ; eq++)
         G->Q[eq](nj,i) = GFLUX[eq];
   }
