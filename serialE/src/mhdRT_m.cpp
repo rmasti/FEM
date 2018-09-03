@@ -14,14 +14,15 @@ int main (int argc, char * argv[])
   constants C;
   C.f_limiter = 1;
   C.num_ghost = 3;
-  C.cfl = 0.5;
+  C.cfl = 0.25;
   C.nmax = 10000;
-  C.wint = 10;
-  C.pint = 1;
+  C.wint = 50;
+  C.pint = 10;
   double A = (2-1)/(1.0+2.0);
   double tend = 6.0/sqrt(A*0.1*2);
 
-  string outputFolder =  "./output/";
+  //string outputFolder =  "./output/";
+  string outputFolder =  "/mnt/c/Users/rlm78/Desktop/matlabstuff/";
   string mesh = "mesh/debugMatlab.msh";
 
   ///////////////// READ IN THE MESH ///////////////////
@@ -49,7 +50,7 @@ int main (int argc, char * argv[])
   //Aj normal vector has x and y componenets
   MatrixXd njx(Aj.rows(), Aj.cols());
   MatrixXd njy(Aj.rows(), Aj.cols());
- 
+
   // time variables
   MatrixXd time(1, C.nmax);
   double dt;
@@ -91,11 +92,15 @@ int main (int argc, char * argv[])
 
   cout << "Initializing" << endl;
   initialize(V, xc_g, yc_g, C);
-  T = V->Q[pid].cwiseProduct(V->Q[rhoid].cwiseInverse())/R; //computeTemperature
-  setBC(V, nix, niy, njx, njy, T, C);
+  //T = V->Q[pid].cwiseProduct(V->Q[rhoid].cwiseInverse())/R; //computeTemperature
   primToCons(U, V);
+  setBConU(U, nix, niy, njx, njy, C);
+  //setBC(V, nix, niy, njx, njy, T, C);
+  //primToCons(U, V);
+  U_RK = U;
 
-  dt = computeTimeStep(Volume, Ai, Aj, nix, niy, njx, njy, V, C);
+  //dt = computeTimeStep(Volume, Ai, Aj, nix, niy, njx, njy, V, C);
+  dt = computeTimeStepU(Volume, Ai, Aj, nix, niy, njx, njy, U, C);
 
   outputArrayMap(outputFolder, "V", V, 0);
   outputArrayMap(outputFolder, "U", U, 0);
@@ -104,19 +109,64 @@ int main (int argc, char * argv[])
   outputArray(outputFolder, "xc", xc, 0);
   outputArray(outputFolder, "yc", yc, 0);
 
- // cout << U_B->Q[rhoid] << endl;
+  outputArray(outputFolder, "Ai", Ai, 0);
+  outputArray(outputFolder, "Aj", Aj, 0);
+  outputArray(outputFolder, "njx", njx, 0);
+  outputArray(outputFolder, "njy", njy, 0);
+  outputArray(outputFolder, "nix", nix, 0);
+  outputArray(outputFolder, "niy", niy, 0);
+
+  int n = 0;
+  cout << "BEFORE" << endl;
+  while(time(0,n) < tend && n < 101)
+  {
+    for(int k = 0; k < RKORDER; k++)
+    {
+      setBConU(U_RK, nix, niy, njx, njy, C);
+      
+      //T = V->Q[pid].cwiseProduct(V->Q[rhoid].cwiseInverse())/R; //computeTemperature
+      //setBC(V, nix, niy, njx, njy, T, C);
+      //primToCons(U_RK, V);
+
+      computeSourceTerm(S, U_RK, xc, yc, C);
+
+      MUSCL(U_L, U_R, U_B, U_T, U_RK, C);
+
+      compute2dFlux(F, G, U_L, U_R, U_B, U_T, njx, njy, nix, niy, C);
+
+      computeRes(Res, S, F, G, Aj, Ai, Volume, C);
+
+      rungeKutta(U_RK, U, Res, Volume, k, dt, C);
+
+      //consToPrim(V, U_RK);
+    }
+    U = U_RK;
+
+    dt = computeTimeStepU(Volume, Ai, Aj, nix, niy, njx, njy, U, C);
+    //dt = computeTimeStep(Volume, Ai, Aj, nix, niy, njx, njy, V, C);
+
+    time(0,n+1) = time(0,n) + dt;
+    n++;
+
+    if(n%C.wint == 0)
+    {
+      outputArrayMap(outputFolder, "U", U, n);
+
+      outputArrayMap(outputFolder, "F", F, n);
+      outputArrayMap(outputFolder, "G", G, n);
+      outputArrayMap(outputFolder, "S", S, n);
  
-  MUSCL(U_L, U_R, U_B, U_T, U, C);
+    }
+
+    if(n%C.pint == 0)
+      cout << "time  =" << time(0,n) << endl;
+  }
 
 
 
-  outputArrayMap(outputFolder, "UT", U_T, 0);
-  outputArrayMap(outputFolder, "UR", U_R, 0);
-  compute2dFlux(F, G, U_L, U_R, U_B, U_T, njx, njy, nix, niy, C);
 
- 
-  outputArrayMap(outputFolder, "F", F, 0);
-  cout << "Made it here" << endl;
 
-   return 0;
+ cout << "Made it to End" << endl;
+
+  return 0;
 }

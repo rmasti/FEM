@@ -8,6 +8,295 @@
 # include "mhdRT.hpp"
 
 
+double computeTimeStepU(
+    MatrixXd& Volume,      // input - volume of every cell
+    MatrixXd& Ai,          // input - area in i dir 
+    MatrixXd& Aj,          // input - area in j dir
+    MatrixXd& nix,    // input - norm i dir x comp
+    MatrixXd& niy,    // input - norm i dir y comp
+    MatrixXd& njx,    // input - norm j dir x comp
+    MatrixXd& njy,    // input - norm j dir y comp
+    Map2Eigen* U,           // input - prim var for speeds
+    constants C            // input - constants for the CFL number
+    )
+{
+
+  int ni = Volume.cols();
+  int nj = Volume.rows();
+
+  // need to get the avg normal vectors
+  double ni_avg_xhat, ni_avg_yhat;
+  double nj_avg_xhat, nj_avg_yhat;
+  // get the eigen value which is != MaxSpeed
+  double lambda_i, lambda_j;
+  double Ai_avg, Aj_avg;
+
+  // add iterables for the cells
+  int i_c, j_c;
+  int bot = C.num_ghost;// first interior cell in j dir
+  int left = C.num_ghost;// first interior cell in i dir
+  double dt_min=1e10;
+  double maxSpeed;
+  double Vmax[NEQ];
+  double Umax[NEQ];
+  double dt;
+  for (int j = 0; j < nj; j++)
+  {
+    for (int i = 0; i < ni; i++)
+    {
+      i_c = left + i;
+      j_c = bot + j;
+      // get the avg norm vecs
+      ni_avg_xhat = 0.5*(nix(j,i)+nix(j,i+1));
+      ni_avg_yhat = 0.5*(niy(j,i)+niy(j,i+1));
+      nj_avg_xhat = 0.5*(njx(j,i)+njx(j+1,i));
+      nj_avg_yhat = 0.5*(njy(j,i)+njy(j+1,i));
+
+      // get avg area
+      Ai_avg = 0.5*(Ai(j,i) + Ai(j,i+1));
+      Aj_avg = 0.5*(Aj(j,i) + Aj(j+1,i));
+
+      // compute max eigen values
+
+      for(int eq = 0; eq < NEQ; eq++)
+        Umax[eq] = U->Q[eq](j_c,i_c);
+
+      cons2Prim(Vmax, Umax, NEQ);
+      maxSpeed = computeMaxSpeed(Vmax);
+      lambda_i = abs(Vmax[uid]*ni_avg_xhat 
+          + Vmax[vid]*ni_avg_yhat) + maxSpeed;
+      lambda_j = abs(Vmax[uid]*nj_avg_xhat 
+          + Vmax[vid]*nj_avg_yhat) + maxSpeed;
+
+      // compute time step non uniform grid
+      dt = C.cfl*Volume(j,i) / (lambda_i*Ai_avg + lambda_j*Aj_avg);
+      if (dt < dt_min)
+        dt_min = dt;
+    }
+  }
+  return dt_min;
+}
+
+
+
+void setBConU(Map2Eigen* U, const MatrixXd& nix, const MatrixXd& niy, const MatrixXd& njx, const MatrixXd njy, constants C)
+{
+  int ic, jc;
+  int nj = U->Q[rhoid].rows();
+  int ni = U->Q[rhoid].cols();
+  int igr;
+  int igl;
+  int icr;
+  int icl;
+
+  // left and right use periodic BC
+  icl = C.num_ghost;
+  icr = ni-C.num_ghost-1;
+  for(int i = 0; i < C.num_ghost; i++)
+  {
+    igr = (ni-C.num_ghost)+i;
+    igl = (C.num_ghost-1)-i;
+    //cout << icl+i << " " << igr<< endl;// << " " << igr << endl;  
+    //cout << icr-i << " " << igl<< endl;// << " " << igr << endl;  
+
+    // Left g copy right interior
+    //indepndent
+    U->Q[rhoid].col(igl) = U->Q[rhoid].col(icr-i);
+    U->Q[wid].col(igl) = U->Q[wid].col(icr-i);
+    U->Q[pid].col(igl) = U->Q[pid].col(icr-i);
+    U->Q[bzid].col(igl) = U->Q[bzid].col(icr-i);
+
+    //direction flip
+    U->Q[uid].col(igl) = -1*U->Q[uid].col(icr-i);
+    U->Q[vid].col(igl) = -1*U->Q[vid].col(icr-i);
+    U->Q[bxid].col(igl) = -1*U->Q[bxid].col(icr-i);
+    U->Q[byid].col(igl) = -1*U->Q[byid].col(icr-i);
+
+    // Right g copy left interior
+    //indepndent
+    U->Q[rhoid].col(igr) = U->Q[rhoid].col(icl+i);
+    U->Q[wid].col(igr) = U->Q[wid].col(icl+i);
+    U->Q[pid].col(igr) = U->Q[pid].col(icl+i);
+    U->Q[bzid].col(igr) = U->Q[bzid].col(icl+i);
+
+    //direction flip
+    U->Q[uid].col(igr) = -1*U->Q[uid].col(icl+i);
+    U->Q[vid].col(igr) = -1*U->Q[vid].col(icl+i);
+    U->Q[bxid].col(igr) = -1*U->Q[bxid].col(icl+i);
+    U->Q[byid].col(igr) = -1*U->Q[byid].col(icl+i);
+  }
+
+  // top bottom slipwall
+  int jfb, jft;
+  jfb = 0; jft = njx.rows()-1; //top face
+  int jgb, jgt;
+  int iff;
+
+  int jcb, jct; 
+  double uvel, vvel, bx, by, nx,ny;
+  for(int j = 0; j < C.num_ghost; j++)
+  {
+    for(int i = C.num_ghost; i < ni-C.num_ghost; i++)
+    {
+
+      iff = i-C.num_ghost;
+      //for(int i = C.num_ghost; i < ni-C.num_ghost; i++)
+      jcb = C.num_ghost + j;
+      jct = nj-C.num_ghost-1 - j;
+
+      jgt = (nj-C.num_ghost)+j;
+      jgb = (C.num_ghost-1)-j;  
+      //bottom 
+
+      // Get vectors
+
+      nx = njx(jfb,iff); 
+      ny = njy(jfb,iff);
+      uvel = U->Q[uid](jcb+j,i);
+      vvel = U->Q[vid](jcb+j,i);
+      bx = U->Q[bxid](jcb+j,i);
+      by = U->Q[byid](jcb+j,i);
+
+      //horizontal boundary lower
+      //no penetrate
+      U->Q[uid](jgb,i) = -nx*(uvel*nx+vvel*ny) - ny*(-uvel*ny + vvel*nx); 
+      U->Q[vid](jgb,i) = -ny*(uvel*nx+vvel*ny) + nx*(-uvel*ny + vvel*nx);
+      U->Q[bxid](jgb,i) = -nx*(bx*nx+by*ny) - ny*(-bx*ny + by*nx); 
+      U->Q[byid](jgb,i) = -ny*(bx*nx+by*ny) + nx*(-bx*ny + by*nx);
+      // extrapolate
+      /*
+      U->Q[rhoid](jgb,i) = 2.0*U->Q[rhoid](jgb+1,i) - U->Q[rhoid](jgb+2,i);
+      U->Q[wid](jgb,i) = 2.0*U->Q[wid](jgb+1,i) - U->Q[wid](jgb+2,i);
+      U->Q[pid](jgb,i) = 2.0*U->Q[pid](jgb+1,i) - U->Q[pid](jgb+2,i);
+      U->Q[bzid](jgb,i) = 2.0*U->Q[bzid](jgb+1,i) - U->Q[bzid](jgb+2,i);
+      */
+         U->Q[rhoid](jgb,i) = U->Q[rhoid](jgb+1,i);// - U->Q[rhoid](jgb+2,i);
+         U->Q[wid](jgb,i) = U->Q[wid](jgb+1,i);// - U->Q[wid](jgb+2,i);
+         U->Q[pid](jgb,i) = U->Q[pid](jgb+1,i);// - U->Q[pid](jgb+2,i);
+         U->Q[bzid](jgb,i) = U->Q[bzid](jgb+1,i);// - U->Q[bzid](jgb+2,i);
+
+      // horizontal boundary upper
+      nx = njx(jft,iff); 
+      ny = njy(jft,iff);
+      uvel = U->Q[uid](jct-j,i);
+      vvel = U->Q[vid](jct-j,i);
+      bx = U->Q[bxid](jct-j,i);
+      by = U->Q[byid](jct-j,i);
+
+      //no penetrate
+      U->Q[uid](jgt,i) = -nx*(uvel*nx+vvel*ny) - ny*(-uvel*ny + vvel*nx); 
+      U->Q[vid](jgt,i) = -ny*(uvel*nx+vvel*ny) + nx*(-uvel*ny + vvel*nx);
+      U->Q[bxid](jgt,i) = -nx*(bx*nx+by*ny) - ny*(-bx*ny + by*nx); 
+      U->Q[byid](jgt,i) = -ny*(bx*nx+by*ny) + nx*(-bx*ny + by*nx);
+
+      // extrapolate
+      /*
+      U->Q[rhoid](jgt,i) = 2.0*U->Q[rhoid](jgt-1,i) - U->Q[rhoid](jgt-2,i);
+      U->Q[wid](jgt,i) = 2.0*U->Q[wid](jgt-1,i) - U->Q[wid](jgt-2,i);
+      U->Q[pid](jgt,i) = 2.0*U->Q[pid](jgt-1,i) - U->Q[pid](jgt-2,i);
+      U->Q[bzid](jgt,i) = 2.0*U->Q[bzid](jgt-1,i) - U->Q[bzid](jgt-2,i);
+      */
+
+         U->Q[rhoid](jgt,i) = U->Q[rhoid](jgt-1,i);// - U->Q[rhoid](jgt-2,i);
+         U->Q[wid](jgt,i) = U->Q[wid](jgt-1,i);// - U->Q[wid](jgt-2,i);
+         U->Q[pid](jgt,i) = U->Q[pid](jgt-1,i);// - U->Q[pid](jgt-2,i);
+         U->Q[bzid](jgt,i) =U->Q[bzid](jgt-1,i);// - U->Q[bzid](jgt-2,i);
+
+
+    }
+  }
+}
+
+void rungeKutta(
+    // This function performs a runge kutta updating scheme based on the k
+    Map2Eigen* U_RK,        // output - Consvar with RK dt stepping  
+    Map2Eigen* U,           // input - Consvar before
+    Map2Eigen* Res,         // input - Residual 
+    MatrixXd& Volume,      // input - Volume matrix
+    int k,                 // input - iteration
+    double dt,         // input - dt minimum
+    constants C            // input - constants 
+    ) 
+{
+  int ni = Res->Q[rhoid].cols(); // number int cells i dir
+  int nj = Res->Q[rhoid].rows(); // number in cells j dir
+  int bot = C.num_ghost;
+  int left = C.num_ghost;
+  if (Volume.rows() != nj || Volume.cols() != ni)
+  {
+    cerr << "ERROR: Dimension Mismatch in RK?!?!" << endl;
+    exit(1);
+  } 
+  double a[4];
+  if (RKORDER == 1) // 1 stage RK 
+    a[0] = 1.0; a[1]=a[2]=a[3]=0;
+  if (RKORDER == 2) // 2 stage RK
+  {
+    a[0] = 0.5; a[1] = 1.0; a[2]=a[3]=0;
+  }
+  if (RKORDER == 4) // 4 stage RK
+  {
+    a[0] = 0.25; a[1] = 1.0/3.0; a[2] = 0.5; a[3] = 1.0;
+  }
+  if (RKORDER == 3 || RKORDER > 4) // no sense in doing 3
+  {
+    cerr << "ERROR: RK Order Not Available?!?!" << endl;
+    exit(1);
+  } 
+  // set iteration for big matrix
+  int i_c, j_c;
+  for (int j = 0; j < nj; j++)
+    for (int i = 0; i < ni; i++)
+    {
+      i_c = left + i;
+      j_c = bot + j;
+      for (int eq = 0; eq < NEQ; eq++) 
+        U_RK->Q[eq](j_c,i_c) = U->Q[eq](j_c,i_c) - a[k]*dt*Res->Q[eq](j,i)/Volume(j,i);
+    }
+}
+
+void computeRes(Map2Eigen* Res, const Map2Eigen* S, const Map2Eigen* F, const Map2Eigen* G, const MatrixXd& Aj, const MatrixXd& Ai, const MatrixXd& Volume, constants C)
+{
+  for (int j = 0; j < Res->Q[rhoid].rows(); j++)
+    for (int i = 0; i < Res->Q[rhoid].cols(); i++)
+      // res = right + top - left - bottom - source
+      for (int eq = 0; eq < NEQ; eq++)
+        Res->Q[eq](j,i) = F->Q[eq](j,i+1)*Ai(j,i+1) 
+          + G->Q[eq](j+1,i)*Aj(j+1,i)
+          - F->Q[eq](j,i)*Ai(j,i) 
+          - G->Q[eq](j,i)*Aj(j,i) 
+          - S->Q[eq](j,i)*Volume(j  ,i);
+}
+
+void computeSourceTerm(Map2Eigen* S, Map2Eigen* U, const MatrixXd& xc, const MatrixXd& yc, constants C)
+{
+  int nj = xc.rows();
+  int ni = xc.cols();
+  int ig, jg;
+
+  /*
+     S->Q[rhoid] = MatrixXd::Constant(nj,ni,0.0); // sets all values to rho 
+     S->Q[wid] = MatrixXd::Constant(nj,ni,0.0); // sets all values to rho 
+     S->Q[bxid] = MatrixXd::Constant(nj,ni,0.0); // sets all values to rho 
+     S->Q[byid] = MatrixXd::Constant(nj,ni,0.0); // sets all values to rho 
+     S->Q[bzid] = MatrixXd::Constant(nj,ni,0.0); // sets all values to rho 
+     */
+  double thet; 
+  double g = 0.1;
+  for(int j = 0; j < nj; j++)
+  {
+    jg = j + C.num_ghost;
+    for(int i = 0; i < ni; i++)
+    {
+      ig = i + C.num_ghost;
+      thet = atan2(yc(j,i), xc(j,i));
+         S->Q[uid](j,i) = -1*(U->Q[rhoid](jg,ig))*(g)*cos(thet);
+         S->Q[vid](j,i) = -1*(U->Q[rhoid](jg,ig))*(g)*sin(thet);
+         S->Q[pid](j,i) = ((S->Q[uid](j,i)*-1*g*cos(thet)) + (S->Q[vid](j,i)*-1*g*sin(thet)));//U->Q[rhoid](jg,ig) ;
+    }
+  }
+}
+
 void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R,  Map2Eigen* U_B,  Map2Eigen* U_T, MatrixXd& njx, MatrixXd& njy, MatrixXd& nix, MatrixXd& niy, constants C)
 {
   int nj = F->Q[rhoid].rows();
@@ -22,7 +311,6 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
     {
       for(int eq = 0; eq < NEQ; eq++)
       {
-        cout << j << " " << i <<endl;
         ul[eq] = U_L->Q[eq](j,i);
         ur[eq] = U_R->Q[eq](j,i);
         ub[eq] = U_B->Q[eq](j,i);
@@ -31,6 +319,13 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
 
       computeFlux(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
       computeFlux(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
+
+      /*
+      computeFluxVL(FFLUX, ul, ur, nix(j,i), niy(j,i));
+      computeFluxVL(GFLUX, ub, ut, njx(j,i), njy(j,i));
+      */
+
+
       for(int eq = 0; eq < NEQ; eq++)
       {
         F->Q[eq](j,i) = FFLUX[eq];
@@ -38,34 +333,36 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
       }
     }
   }
- 
+
   // fix right wall
   for(int j = 0; j < nj; j++)
   {
     for(int eq = 0; eq < NEQ; eq++)
-      {
-        ul[eq] = U_L->Q[eq](j,ni);
-        ur[eq] = U_R->Q[eq](j,ni);
+    {
+      ul[eq] = U_L->Q[eq](j,ni);
+      ur[eq] = U_R->Q[eq](j,ni);
 
-      }
+    }
 
-      computeFlux(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
-      for(int eq = 0; eq < NEQ; eq++)
-        F->Q[eq](j,ni) = FFLUX[eq];
+    computeFlux(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
+    //computeFluxVL(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
+    for(int eq = 0; eq < NEQ; eq++)
+      F->Q[eq](j,ni) = FFLUX[eq];
   }
   // fix left wall
 
   for(int i = 0; i < ni; i++)
   {
     for(int eq = 0; eq < NEQ; eq++)
-      {
-        ub[eq] = U_B->Q[eq](nj,i);
-        ut[eq] = U_T->Q[eq](nj,i);
- 
-      }
-      computeFlux(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
-      for(int eq = 0; eq < NEQ; eq++)
-        G->Q[eq](nj,i) = GFLUX[eq];
+    {
+      ub[eq] = U_B->Q[eq](nj,i);
+      ut[eq] = U_T->Q[eq](nj,i);
+
+    }
+    computeFlux(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
+    //computeFluxVL(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
+    for(int eq = 0; eq < NEQ; eq++)
+      G->Q[eq](nj,i) = GFLUX[eq];
   }
 }
 
@@ -175,7 +472,6 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
 {
   int ni = U_B->Q[rhoid].cols(); //ncx
   int nj = U_L->Q[rhoid].rows();//ncy
-  cout << ni << " " << nj << endl;
 
   int ig, jg;
   double theta_L, theta_B, theta_R, theta_T;
@@ -183,17 +479,17 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
   double r_L, r_B, r_R, r_T;
   double delta = 1.0e-6;
 
-/*
-  printf("\n nj = %d, ni = %d \n", nj, ni);
-  printf("\n nj = %ld, ni = %ld \n", U_B->Q[rhoid].rows() , U_B->Q[rhoid].cols());
-  printf("\n nj = %ld, ni = %ld \n", U_R->Q[rhoid].rows(), U_R->Q[rhoid].cols());
-  printf("\n nj = %ld, ni = %ld \n", U_L->Q[rhoid].rows(), U_L->Q[rhoid].cols());
-  printf("\n nj = %ld, ni = %ld \n", U_T->Q[rhoid].rows(), U_T->Q[rhoid].cols());
-  printf("\n nj = %ld, ni = %ld \n", U->Q[rhoid].rows(), U->Q[rhoid].cols());
-  */
+  /*
+     printf("\n nj = %d, ni = %d \n", nj, ni);
+     printf("\n nj = %ld, ni = %ld \n", U_B->Q[rhoid].rows() , U_B->Q[rhoid].cols());
+     printf("\n nj = %ld, ni = %ld \n", U_R->Q[rhoid].rows(), U_R->Q[rhoid].cols());
+     printf("\n nj = %ld, ni = %ld \n", U_L->Q[rhoid].rows(), U_L->Q[rhoid].cols());
+     printf("\n nj = %ld, ni = %ld \n", U_T->Q[rhoid].rows(), U_T->Q[rhoid].cols());
+     printf("\n nj = %ld, ni = %ld \n", U->Q[rhoid].rows(), U->Q[rhoid].cols());
+     */
   for(int j = 0; j < nj; j++)
   {
-  
+
     for(int i = 0; i < ni; i++)
     {
       ig = i+C.num_ghost;
@@ -202,7 +498,7 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
       for(int eq=0; eq < NEQ; eq++)
       {
         // left right
-        
+
         denom_L = U->Q[eq](jg, ig) - U->Q[eq](jg, ig-1);
         denom_R = U->Q[eq](jg, ig+1) - U->Q[eq](jg, ig-1);
         denom_L = SIGN(1,denom_L)*mymax(delta, abs(denom_L));    
@@ -216,7 +512,6 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
         denom_T = U->Q[eq](jg+1, ig) - U->Q[eq](jg-1, ig);
         denom_B = SIGN(1,denom_B)*mymax(delta, abs(denom_B));    
         denom_T = SIGN(1,denom_T)*mymax(delta, abs(denom_T));    
-
         r_B = (U->Q[eq](jg-1,ig) - U->Q[eq](jg-2,ig))/denom_B;
         r_T = (U->Q[eq](jg,ig) - U->Q[eq](jg-1,ig))/denom_T;
         theta_B = limiter(r_B, C);
@@ -224,12 +519,12 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
 
         U_R->Q[eq](j,i) = (U->Q[eq](jg,ig))-0.5*theta_R*((U->Q[eq](jg,ig+1))-(U->Q[eq](jg,ig)));             
         //(U_R->Q_raw[(j+i)*NEQ+eq]) = 100.0;
-        
+
         U_L->Q[eq](j,i) =  (U->Q[eq](jg,ig-1))+0.5*theta_L*((U->Q[eq](jg,ig))-(U->Q[eq](jg,ig-1)));
-        
+
         U_T->Q[eq](j,i) = (U->Q[eq](jg,ig))+0.5*theta_T*((U->Q[eq](jg+1,ig))-(U->Q[eq](jg,ig)));
 
-        U_B->Q_raw[(nj*i+j)*NEQ+eq] =  (U->Q[eq](jg-1,ig))+0.5*theta_B*((U->Q[eq](jg,ig))-(U->Q[eq](jg-1,ig)));
+        U_B->Q[eq](j,i) =  (U->Q[eq](jg-1,ig))+0.5*theta_B*((U->Q[eq](jg,ig))-(U->Q[eq](jg-1,ig)));
 
       }
     }
@@ -239,41 +534,41 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
   //
   for(int j = 0; j < nj; j++)
   {
-      ig = ni+C.num_ghost;
-      jg = j+C.num_ghost;
+    ig = ni+C.num_ghost;
+    jg = j+C.num_ghost;
     for(int eq = 0; eq < NEQ; eq++)
     {
-        denom_L = U->Q[eq](jg, ig) - U->Q[eq](jg, ig-1);
-        denom_R = U->Q[eq](jg, ig+1) - U->Q[eq](jg, ig-1);
-        denom_L = SIGN(1,denom_L)*mymax(delta, abs(denom_L));    
-        denom_R = SIGN(1,denom_R)*mymax(delta, abs(denom_R));    
-        r_L = (U->Q[eq](jg,ig-1) - U->Q[eq](jg,ig-2))/denom_L;
-        r_R = (U->Q[eq](jg,ig) - U->Q[eq](jg,ig-1))/denom_R;
-        theta_L = limiter(r_L, C);
-        theta_R = limiter(r_R, C);
-    
-        U_L->Q[eq](j, ni) =  U->Q[eq](jg,ig-1)+0.5*theta_L*(U->Q[eq](jg,ig)-U->Q[eq](jg,ig-1));
-        U_R->Q[eq](j, ni) = U->Q[eq](jg,ig)-0.5*theta_R*(U->Q[eq](jg,ig+1)-U->Q[eq](jg,ig));             
+      denom_L = U->Q[eq](jg, ig) - U->Q[eq](jg, ig-1);
+      denom_R = U->Q[eq](jg, ig+1) - U->Q[eq](jg, ig-1);
+      denom_L = SIGN(1,denom_L)*mymax(delta, abs(denom_L));    
+      denom_R = SIGN(1,denom_R)*mymax(delta, abs(denom_R));    
+      r_L = (U->Q[eq](jg,ig-1) - U->Q[eq](jg,ig-2))/denom_L;
+      r_R = (U->Q[eq](jg,ig) - U->Q[eq](jg,ig-1))/denom_R;
+      theta_L = limiter(r_L, C);
+      theta_R = limiter(r_R, C);
+
+      U_L->Q[eq](j, ni) =  U->Q[eq](jg,ig-1)+0.5*theta_L*(U->Q[eq](jg,ig)-U->Q[eq](jg,ig-1));
+      U_R->Q[eq](j, ni) = U->Q[eq](jg,ig)-0.5*theta_R*(U->Q[eq](jg,ig+1)-U->Q[eq](jg,ig));             
     }
   }
   // add the last layer top bottom
   for(int i = 0; i < ni; i++)
   {
-      ig = i+C.num_ghost;
-      jg = nj+C.num_ghost;
+    ig = i+C.num_ghost;
+    jg = nj+C.num_ghost;
     for(int eq = 0; eq < NEQ; eq++)
     {
-        denom_B = U->Q[eq](jg, ig) - U->Q[eq](jg-1, ig);
-        denom_T = U->Q[eq](jg+1, ig) - U->Q[eq](jg-1, ig);
-        denom_B = SIGN(1,denom_B)*mymax(delta, abs(denom_B));    
-        denom_T = SIGN(1,denom_T)*mymax(delta, abs(denom_T));    
-        r_B = (U->Q[eq](jg-1,ig) - U->Q[eq](jg-2,ig))/denom_B;
-        r_T = (U->Q[eq](jg,ig) - U->Q[eq](jg-1,ig))/denom_T;
-        theta_B = limiter(r_B, C);
-        theta_T = limiter(r_T, C);
+      denom_B = U->Q[eq](jg, ig) - U->Q[eq](jg-1, ig);
+      denom_T = U->Q[eq](jg+1, ig) - U->Q[eq](jg-1, ig);
+      denom_B = SIGN(1,denom_B)*mymax(delta, abs(denom_B));    
+      denom_T = SIGN(1,denom_T)*mymax(delta, abs(denom_T));    
+      r_B = (U->Q[eq](jg-1,ig) - U->Q[eq](jg-2,ig))/denom_B;
+      r_T = (U->Q[eq](jg,ig) - U->Q[eq](jg-1,ig))/denom_T;
+      theta_B = limiter(r_B, C);
+      theta_T = limiter(r_T, C);
 
-        U_B->Q[eq](nj, i) =  U->Q[eq](jg-1,ig)+0.5*theta_B*(U->Q[eq](jg,ig)-U->Q[eq](jg-1,ig));
-        U_T->Q[eq](nj,i) = U->Q[eq](jg,ig)-0.5*theta_T*(U->Q[eq](jg+1,ig)-U->Q[eq](jg,ig));             
+      U_B->Q[eq](nj, i) =  U->Q[eq](jg-1,ig)+0.5*theta_B*(U->Q[eq](jg,ig)-U->Q[eq](jg-1,ig));
+      U_T->Q[eq](nj,i) = U->Q[eq](jg,ig)-0.5*theta_T*(U->Q[eq](jg+1,ig)-U->Q[eq](jg,ig));             
     }
   }
 
@@ -361,10 +656,10 @@ double computeTimeStep(
       Aj_avg = 0.5*(Aj(j,i) + Aj(j+1,i));
 
       // compute max eigen values
-    
+
       for(int eq = 0; eq < NEQ; eq++)
         Vmax[eq] = V->Q[eq](j_c,i_c);
-      
+
       maxSpeed = computeMaxSpeed(Vmax);
       lambda_i = abs(V->Q[uid](j_c,i_c)*ni_avg_xhat 
           + V->Q[vid](j_c,i_c)*ni_avg_yhat) + maxSpeed;
@@ -590,16 +885,16 @@ void initialize(
   double p0 = 2.5;
   double g = 0.1;
 
-  double vPert = 1.0;
+  double vPert = 0.0;
   double rmidd= 0.375;
   double circ = 2.0*PI*rmidd;
   double Bx = 0.0125;
   double lambda = circ/20;
   double randPert;
 
-  for (int i = 0; i < ni; i++)
+  for (int j = 0; j < nj; j++)
   {
-    for (int j = 0; j < nj; j++)
+    for (int i = 0; i < ni; i++)
     {
       x = xc_g(j, i);
       y = yc_g(j, i);
@@ -620,7 +915,7 @@ void initialize(
       V->Q[uid](j,i) = vPert*decay;
       V->Q[vid](j,i) = vPert*decay;
       V->Q[wid](j,i) = 0.0; 
-      V->Q[pid](j,i) = p0- V->Q[rhoid](j,i)*g*(r-rmidd);
+      V->Q[pid](j,i) = p0 - V->Q[rhoid](j,i)*g*(r-rmidd);
       V->Q[bxid](j,i) = Bx*cos(thet); 
       V->Q[byid](j,i) = Bx*sin(thet); 
       V->Q[bzid](j,i) = 0.0; 
@@ -654,12 +949,6 @@ void computeVolume(
   } 
 }
 
-
-
-
-
-
-
 void computeNormalVectors(
     // This function takes in the previously calculated areas and
     // Finds the fraction in the x and y physical directions
@@ -691,6 +980,8 @@ void computeNormalVectors(
       njy(j,i) = (xn(j,i+1) - xn(j,i)) / Aj(j,i);
     }
   }
+  //cout << njx << endl;
+  //cout << njy << endl;
 }
 
 
@@ -934,21 +1225,21 @@ void primToCons(
   for(int j = 0; j < nj; j++)
     for(int i = 0; i < ni; i++)
     {
-      U->Q_raw[(j*ni+i)*NEQ+rhoid] = V->Q[rhoid](j,i); //U1 = V1
-      U->Q_raw[(j*ni+i)*NEQ+uid] = V->Q[rhoid](j,i)*(V->Q[uid](j,i));
-      U->Q_raw[(j*ni+i)*NEQ+vid] = V->Q[rhoid](j,i)*(V->Q[vid](j,i));
-      U->Q_raw[(j*ni+i)*NEQ+wid]= V->Q[rhoid](j,i)*(V->Q[wid](j,i));
-      U->Q_raw[(j*ni+i)*NEQ+pid] = V->Q[pid](j,i)/(GAMMA - 1.0) 
+      U->Q[rhoid](j,i) = V->Q[rhoid](j,i); //U1 = V1
+      U->Q[uid](j,i) = V->Q[rhoid](j,i)*(V->Q[uid](j,i));
+      U->Q[vid](j,i) = V->Q[rhoid](j,i)*(V->Q[vid](j,i));
+      U->Q[wid](j,i) = V->Q[rhoid](j,i)*(V->Q[wid](j,i));
+      U->Q[pid](j,i) = V->Q[pid](j,i)/(GAMMA - 1.0) 
         + 0.5*V->Q[rhoid](j,i)*((V->Q[uid](j,i))*(V->Q[uid](j,i))) 
         + 0.5*V->Q[rhoid](j,i)*((V->Q[vid](j,i))*(V->Q[vid](j,i))) 
         + 0.5*V->Q[rhoid](j,i)*((V->Q[wid](j,i))*(V->Q[wid](j,i))) 
         + 0.5*V->Q[bxid](j,i)*((V->Q[bxid](j,i)))/MU0 
         + 0.5*V->Q[byid](j,i)*(V->Q[byid](j,i))/MU0 
         + 0.5*V->Q[bzid](j,i)*(V->Q[bzid](j,i))/MU0;
-    
-      U->Q_raw[(j*ni+i)*NEQ+bxid] = V->Q[bxid](j,i); 
-      U->Q_raw[(j*ni+i)*NEQ+byid] = V->Q[byid](j,i); 
-      U->Q_raw[(j*ni+i)*NEQ+bzid] = V->Q[bzid](j,i); 
+
+      U->Q[bxid](j,i) = V->Q[bxid](j,i); 
+      U->Q[byid](j,i) = V->Q[byid](j,i); 
+      U->Q[bzid](j,i) = V->Q[bzid](j,i); 
     }
 }
 
@@ -963,21 +1254,21 @@ void consToPrim(
   for(int j = 0; j < nj; j++)
     for(int i = 0; i < ni; i++)
     {
-      V->Q_raw[(j*ni+i)*NEQ+rhoid] = U->Q[rhoid](j,i); //U1 = V1
-      V->Q_raw[(j*ni+i)*NEQ+uid] = U->Q[uid](j,i)/(U->Q[rhoid](j,i));
-      V->Q_raw[(j*ni+i)*NEQ+vid] = U->Q[vid](j,i)/(U->Q[rhoid](j,i));
-      V->Q_raw[(j*ni+i)*NEQ+wid] = U->Q[wid](j,i)/(U->Q[rhoid](j,i));
-      V->Q_raw[(j*ni+i)*NEQ+pid] = (GAMMA - 1.0) *(U->Q[pid](j,i)  
-        - 0.5*U->Q[uid](j,i)*((U->Q[uid](j,i))/(U->Q[rhoid](j,i))) 
-        - 0.5*U->Q[vid](j,i)*((U->Q[vid](j,i))/(U->Q[rhoid](j,i))) 
-        - 0.5*U->Q[wid](j,i)*((U->Q[wid](j,i))/(U->Q[rhoid](j,i))) 
-        - 0.5*U->Q[bxid](j,i)*(U->Q[bxid](j,i))/MU0 
-        - 0.5*U->Q[byid](j,i)*(U->Q[byid](j,i))/MU0 
-        - 0.5*U->Q[bzid](j,i)*(U->Q[bzid](j,i))/MU0);
-    
-      V->Q_raw[(j*ni+i)*NEQ+bxid] = U->Q[bxid](j,i); 
-      V->Q_raw[(j*ni+i)*NEQ+byid] = U->Q[byid](j,i); 
-      V->Q_raw[(j*ni+i)*NEQ+bzid] = U->Q[bzid](j,i); 
+      V->Q[rhoid](j,i) = U->Q[rhoid](j,i); //U1 = V1
+      V->Q[uid](j,i)= U->Q[uid](j,i)/(U->Q[rhoid](j,i));
+      V->Q[vid](j,i)= U->Q[vid](j,i)/(U->Q[rhoid](j,i));
+      V->Q[wid](j,i)= U->Q[wid](j,i)/(U->Q[rhoid](j,i));
+      V->Q[pid](j,i)= (GAMMA - 1.0) *(U->Q[pid](j,i)  
+          - 0.5*U->Q[uid](j,i)*((U->Q[uid](j,i))/(U->Q[rhoid](j,i))) 
+          - 0.5*U->Q[vid](j,i)*((U->Q[vid](j,i))/(U->Q[rhoid](j,i))) 
+          - 0.5*U->Q[wid](j,i)*((U->Q[wid](j,i))/(U->Q[rhoid](j,i))) 
+          - 0.5*U->Q[bxid](j,i)*(U->Q[bxid](j,i))/MU0 
+          - 0.5*U->Q[byid](j,i)*(U->Q[byid](j,i))/MU0 
+          - 0.5*U->Q[bzid](j,i)*(U->Q[bzid](j,i))/MU0);
+
+      V->Q[bxid](j,i) = U->Q[bxid](j,i); 
+      V->Q[byid](j,i) = U->Q[byid](j,i); 
+      V->Q[bzid](j,i) = U->Q[bzid](j,i); 
     }
 }
 
@@ -999,6 +1290,99 @@ void cons2Prim(
     V[index+wid] = U0[wid]/U0[rhoid]; //rhou/rho
     V[index+pid] = (GAMMA-1.0)*(U0[pid] - 0.5*(U0[uid]*U0[uid] + U0[vid]*U0[vid] + U0[wid]*U0[wid])/U0[rhoid] - 0.5*((U0[bxid]*U0[bxid] + U0[byid]*U0[byid] + U0[bzid]*U0[bzid]))/MU0);
   }
+}
+
+//////////////////////////////// OLD //////////////////////
+
+
+void computeFluxVL(double* FFLUX, double* ul, double* ur, double nxhat, double nyhat)
+{
+  // define constants
+  double M_L, M_R, M_p, M_n;
+  double beta_L, beta_R;
+  double alpha_p, alpha_n;
+  double c_p, c_n;
+  double a_L, a_R;
+  double U_L, U_R;
+  double D_p, D_n;
+  double p_bar_p, p_bar_n;
+  double ht_L, ht_R; 
+  double Fc[NEQ], Fp[NEQ];
+
+  // grab the correct flux dimensions
+
+  double vl[NEQ];
+  double vr[NEQ];
+
+  cons2Prim(vl, ul, NEQ);
+  cons2Prim(vr, ur, NEQ);
+  // compute sound speed
+  a_L = sqrt(GAMMA*vl[pid] / vl[rhoid]); 
+  a_R = sqrt(GAMMA*vr[pid] / vr[rhoid]); 
+
+  // compute speed
+  U_L = vl[uid]*nxhat + vl[vid]*nyhat;
+  U_R = vr[uid]*nxhat + vr[vid]*nyhat;
+
+  // compute mach # from speed Mach is a scalar***
+  M_L = U_L/a_L;
+  M_R = U_R/a_R;
+
+  // Compute M_+ and M_- see notes sec06 slides > 74
+  M_p = 0.25*(M_L + 1)*(M_L + 1);
+  M_n = -0.25*(M_R - 1)*(M_R - 1);
+
+  // Compute beta_LR for use in det flux cont
+  beta_L = -mymax(0, 1 - int(abs(M_L)));
+  beta_R = -mymax(0, 1 - int(abs(M_R)));
+
+  // NOTE SIGN has specific inputs applies sign of b to a SIGN(a,b)
+  alpha_p = 0.5*(1 + SIGN(1, M_L));
+  alpha_n = 0.5*(1 - SIGN(1, M_R));
+
+  c_p = alpha_p*(1+beta_L)*M_L - beta_L*M_p;
+  c_n = alpha_n*(1+beta_R)*M_R - beta_R*M_n;
+
+  // compute avg pressure
+  p_bar_p = M_p*(-M_L + 2);
+  p_bar_n = M_n*(-M_R - 2);
+
+  // compute diff pos and neg
+  D_p = alpha_p*(1+beta_L) - beta_L*p_bar_p;
+  D_n = alpha_n*(1+beta_R) - beta_R*p_bar_n;
+
+  // left and right enthalpy
+  ht_L = (GAMMA/(GAMMA-1))*vl[pid]/vl[rhoid] 
+    + 0.5*( vl[uid]*vl[uid] + 
+        vl[vid]*vl[vid]);
+  ht_R = (GAMMA/(GAMMA-1))*vr[pid]/vr[rhoid] 
+    + 0.5*( vr[uid]*vr[uid] + 
+        vr[vid]*vr[vid]);
+
+
+  // compute convective flux contribution
+  Fc[0] = vl[rhoid]*a_L*c_p + vr[rhoid]*a_R*c_n;
+
+  Fc[1] = vl[rhoid]*a_L*c_p*vl[uid] 
+    + vr[rhoid]*a_R*c_n*vr[uid];
+
+  Fc[2] = vl[rhoid]*a_L*c_p*vl[vid] 
+    + vr[rhoid]*a_R*c_n*vr[vid];
+
+  Fc[3] = vl[rhoid]*a_L*c_p*ht_L 
+    + vr[rhoid]*a_R*c_n*ht_R;
+
+  // compute pressure flux contribution
+  Fp[0] = 0.0;
+  Fp[1] = D_p*nxhat*vl[pid] + 
+    D_n*nxhat*vr[pid];
+  Fp[2] = D_p*nyhat*vl[pid] + 
+    D_n*nyhat*vr[pid];
+  Fp[3] = 0.0;
+
+  // loop over and add the two
+  for (int eq = 0; eq < NEQ; eq++)
+    FFLUX[eq] = Fc[eq] + Fp[eq];
 }
 
 

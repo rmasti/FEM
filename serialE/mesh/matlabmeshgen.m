@@ -4,12 +4,12 @@
 clc, clear, close all
 
 
-nx = 5;
-ny = 5;
+nx = 120;
+ny = 20;
 
 % r and theta coordinates
 
-theta = linspace(pi,0, nx+1);
+theta = linspace(0,pi, nx+1);
 rl = linspace(0.25, 0.5, ny+1);
 
 

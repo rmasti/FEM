@@ -106,6 +106,9 @@ void cons2Prim(double V[],double U[],int size);
 
 double computeTimeStep(MatrixXd& Volume, MatrixXd& Ai, MatrixXd& Aj, MatrixXd& nix,  MatrixXd& niy, MatrixXd& njx,  MatrixXd& njy, Map2Eigen* V, constants C);
 
+double computeTimeStepU(MatrixXd& Volume, MatrixXd& Ai, MatrixXd& Aj, MatrixXd& nix,  MatrixXd& niy, MatrixXd& njx,  MatrixXd& njy, Map2Eigen* U, constants C);
+
+void computeFluxVL(double* FFLUX, double* ul,double* ur, double nxhat, double nyhat);
 
 double computeMaxSpeed(double V[]); 
 
@@ -125,4 +128,17 @@ void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& ny
 void fFlux(double F[], double U[]);
 
 void gFlux(double G[], double U[]);
+
+
+void computeSourceTerm(Map2Eigen* S, Map2Eigen* U, const MatrixXd& xc, const MatrixXd& yc, constants C);
+
+
+void computeRes(Map2Eigen* Res, const Map2Eigen* S, const Map2Eigen* F, const Map2Eigen* G, const MatrixXd& Aj, const MatrixXd& Ai, const MatrixXd& Volume, constants C);
+
+
+void rungeKutta(Map2Eigen* U_RK, Map2Eigen* U, Map2Eigen* Res, MatrixXd& Volume, int k, double dt, constants C);
+
+
+void setBConU(Map2Eigen* U, const MatrixXd& nix, const MatrixXd& niy, const MatrixXd& njx, const MatrixXd njy, constants C);
+
 #endif
