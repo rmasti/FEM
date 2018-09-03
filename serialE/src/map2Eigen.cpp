@@ -5,8 +5,8 @@
 
 
 Map2Eigen :: Map2Eigen(int ni, int nj, int nequ):
-    Q_raw(new double[ni*nj*nequ]),
-      Q{ {Q_raw, ni, nj, Stride<Dynamic,Dynamic>(ni*nequ, nequ) },
+    Q_raw(new double[nj*ni*nequ]),
+      Q{{Q_raw,   ni, nj, Stride<Dynamic,Dynamic>(ni*nequ, nequ) },
         {Q_raw+1, ni, nj, Stride<Dynamic,Dynamic>(ni*nequ, nequ) },
         {Q_raw+2, ni, nj, Stride<Dynamic,Dynamic>(ni*nequ, nequ) },
         {Q_raw+3, ni, nj, Stride<Dynamic,Dynamic>(ni*nequ, nequ) },

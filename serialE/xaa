@@ -56,7 +56,7 @@ class Map2Eigen
 {
   public:
   
-  Map2Eigen(int ni, int nj, int nequ);
+  Map2Eigen(int nj, int ni, int nequ);
 
   double *Q_raw;
 
@@ -100,9 +100,8 @@ void setBC(Map2Eigen* V, const MatrixXd& n_i_xhat, const MatrixXd& n_i_yhat, con
 void slipwallBC(Map2Eigen* V, const int Begin[], const int End[], const MatrixXd& n_i_xhat, const MatrixXd& n_i_yhat, const MatrixXd& n_j_xhat, const MatrixXd& n_j_yhat, MatrixXd& T, constants C);
 
 
-void primToCons(Map2Eigen* U, const Map2Eigen* V);
-void consToPrim(Map2Eigen* V, const Map2Eigen* U);
-void cons2Prim(double V[],double U[],int size);
+void primToCons(Map2Eigen* U, const Map2Eigen* V, constants C);
+
 
 double computeTimeStep(MatrixXd& Volume, MatrixXd& Ai, MatrixXd& Aj, MatrixXd& n_i_xhat,  MatrixXd& n_i_yhat, MatrixXd& n_j_xhat,  MatrixXd& n_j_yhat, Map2Eigen* V, constants C);
 
@@ -118,11 +117,10 @@ double SIGN(double a, double b);
 double limiter(double& r, constants C);
 
 
-void compute2dFlux(Map2Eigen* F, Map2Eigen* G, const Map2Eigen* U_L , const Map2Eigen* U_R, const Map2Eigen* U_B, const Map2Eigen* U_T, MatrixXd& n_j_xhat, MatrixXd& n_j_yhat, MatrixXd& n_i_xhat, MatrixXd& n_i_yhat, constants C);
+void computeFlux(Map2Eigen* F, Map2Eigen* G, const Map2Eigen* U_L , const Map2Eigen* U_R, const Map2Eigen* U_B, const Map2Eigen* U_T, const MatrixXd& n_j_xhat, const MatrixXd& n_j_yhat, const MatrixXd& n_i_xhat, const MatrixXd& n_i_yhat, constants C);
 
 void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG);
 
 void fFlux(double F[], double U[]);
 
-void gFlux(double G[], double U[]);
 #endif
