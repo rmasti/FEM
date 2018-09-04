@@ -1,0 +1,13 @@
+%Plotting Script
+% Written By: Robert Masti
+% 09/01/2018
+
+clc, clear, close all
+
+format long;
+
+xc_g = load('xc_g-0.txt');
+yc_g = load('yc_g-0.txt');
+
+xc = load('xc-0.txt');
+yc = load('yc-0.txt');

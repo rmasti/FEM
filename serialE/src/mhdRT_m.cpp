@@ -12,17 +12,17 @@ int main (int argc, char * argv[])
 {
 
   constants C;
-  C.f_limiter = 1;
+  C.f_limiter = 7;
   C.num_ghost = 3;
   C.cfl = 0.25;
   C.nmax = 10000;
   C.wint = 50;
-  C.pint = 10;
+  C.pint = 1;
   double A = (2-1)/(1.0+2.0);
   double tend = 6.0/sqrt(A*0.1*2);
 
-  //string outputFolder =  "./output/";
-  string outputFolder =  "/mnt/c/Users/rlm78/Desktop/matlabstuff/";
+  string outputFolder =  "./output/";
+  //string outputFolder =  "/mnt/c/Users/rlm78/Desktop/matlabstuff/";
   string mesh = "mesh/debugMatlab.msh";
 
   ///////////////// READ IN THE MESH ///////////////////
@@ -35,6 +35,7 @@ int main (int argc, char * argv[])
   MatrixXd yc_g(yc.rows()+2*C.num_ghost, yc.cols()+2*C.num_ghost);
   extrapCopyCoords(xc_g, yc_g, xc, yc, C); // get ghost cell coord
 
+
   ////////////////////// SETUP VARIABLES //////////////////////
   // SETUP AREA's and Vols
   //i or x dir areas the columns of the matrix
@@ -42,6 +43,7 @@ int main (int argc, char * argv[])
   //j or y dir areas the rows or the matrix
   MatrixXd Aj(xn.rows(), xc.cols()); // sets (row,col) (j,i)
   MatrixXd Volume(xc.rows(), xc.cols());
+  cout << Volume.rows() <<  " " << Volume.cols() << endl;
 
   // SETUP NORMAL VECS
   //Ai normal vector has x and y components (so same size as Ai)
@@ -85,10 +87,11 @@ int main (int argc, char * argv[])
 
 
   ////////////////// INITIALIZE //////////////////
-  computeArea(Ai, Aj, xn, yn); // take nodal coords extract interface A
+  computeArea(Ai, Aj, xn, yn); // take nodal coords extract interface A // Checked
   computeNormalVectors(nix, niy, njx, njy,
-      xn, yn, Ai, Aj); // grab the norm vec 4 computational domain
-  computeVolume(Volume, xn, yn);
+      xn, yn, Ai, Aj); // grab the norm vec 4 computational domain // Checked
+
+  computeVolume(Volume, xn, yn); // Checked
 
   cout << "Initializing" << endl;
   initialize(V, xc_g, yc_g, C);
@@ -115,6 +118,7 @@ int main (int argc, char * argv[])
   outputArray(outputFolder, "njy", njy, 0);
   outputArray(outputFolder, "nix", nix, 0);
   outputArray(outputFolder, "niy", niy, 0);
+  outputArray(outputFolder, "volume", Volume, 0);
 
   int n = 0;
   cout << "BEFORE" << endl;

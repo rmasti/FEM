@@ -96,8 +96,6 @@ void setBConU(Map2Eigen* U, const MatrixXd& nix, const MatrixXd& niy, const Matr
   {
     igr = (ni-C.num_ghost)+i;
     igl = (C.num_ghost-1)-i;
-    //cout << icl+i << " " << igr<< endl;// << " " << igr << endl;  
-    //cout << icr-i << " " << igl<< endl;// << " " << igr << endl;  
 
     // Left g copy right interior
     //indepndent
@@ -882,13 +880,13 @@ void initialize(
   double x, y, r, thet;
   double rhoL = 1.0;
   double rhoH = 2.0;
-  double p0 = 2.5;
+  double p0 = 5.5;
   double g = 0.1;
 
   double vPert = 0.0;
   double rmidd= 0.375;
   double circ = 2.0*PI*rmidd;
-  double Bx = 0.0125;
+  double Bx = 0.0;//125;
   double lambda = circ/20;
   double randPert;
 
@@ -903,7 +901,7 @@ void initialize(
       thet = atan2(y,x);
 
       randPert = ((double) rand() / (RAND_MAX));
-      if(r < rmidd*(1.0+0.01*cos(10*abs(randPert)*thet/PI + randPert*PI)))
+      if(r < rmidd)//*(1.0+0.01*cos(10*abs(randPert)*thet/PI + randPert*PI)))
         V->Q[rhoid](j,i) = rhoL;
       else
         V->Q[rhoid](j,i) = rhoH;
@@ -980,8 +978,6 @@ void computeNormalVectors(
       njy(j,i) = (xn(j,i+1) - xn(j,i)) / Aj(j,i);
     }
   }
-  //cout << njx << endl;
-  //cout << njy << endl;
 }
 
 
@@ -1130,16 +1126,18 @@ void inputMesh(
   int nx = vals[1];
   int ny = vals[2];
 
-  double dat[ntot*2];
+  //double dat[ntot*2];
+  VectorXd dat(ntot*2);
   int i = 0;
   while (infile.good())
     while (getline(infile, line))
     {
       istringstream streamA(line);
       while(streamA >> readval)
-        dat[i] = readval;
+        dat(i) = readval;
       i++;
     } 
+
   xn.resize(ny, nx); //number of rows, number of columns
   yn.resize(ny, nx); //number of rows, number of columns
   xc.resize(ny-1, nx-1);
@@ -1154,7 +1152,6 @@ void inputMesh(
       xn(j, i) = dat[xInd];
       yn(j, i) = dat[yInd];
     }
-
   for (int j = 0; j < xc.rows(); j++)
     for (int i = 0 ; i < xc.cols(); i++)
     {
@@ -1212,7 +1209,7 @@ void outputArray(
   // where lines end and start
   //IOFormat CleanFmt(14,0,", ", "\n", "[", "]");
   IOFormat CleanFmt(14);
-  outfile << out.transpose().format(CleanFmt) << endl; // output trans
+  outfile << out.format(CleanFmt) << endl; // output trans
   //outfile << setprecision(14) << out << endl; // output trans
 }
 
