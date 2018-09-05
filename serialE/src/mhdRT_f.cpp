@@ -94,12 +94,48 @@ void setBConU(Map2Eigen* U, const MatrixXd& nix, const MatrixXd& niy, const Matr
   icr = ni-C.num_ghost-1;
   for(int i = 0; i < C.num_ghost; i++)
   {
-    igr = (ni-C.num_ghost)+i;
-    igl = (C.num_ghost-1)-i;
+    for(int j = C.num_ghost; j < nj-C.num_ghost; j++)
+    {
+    
+      igr = (ni-C.num_ghost)+i;
+      igl = (C.num_ghost-1)-i;
+
+      // Left g copy right interior
+      //indepndent
+      U->Q[rhoid].col(igl) = U->Q[rhoid].col(icr-i);
+      //cout << U->Q[rhoid].col(icr-i) << endl;
+      U->Q[wid].col(igl) = U->Q[wid].col(icr-i);
+      U->Q[pid].col(igl) = U->Q[pid].col(icr-i);
+      U->Q[bzid].col(igl) = U->Q[bzid].col(icr-i);
+
+      //direction flip
+      U->Q[uid].col(igl) = -1*U->Q[uid].col(icr-i);
+      U->Q[vid].col(igl) = -1*U->Q[vid].col(icr-i);
+      U->Q[bxid].col(igl) = -1*U->Q[bxid].col(icr-i);
+      U->Q[byid].col(igl) = -1*U->Q[byid].col(icr-i);
+
+      // Right g copy left interior
+      //indepndent
+      U->Q[rhoid].col(igr) = U->Q[rhoid].col(icl+i);
+      U->Q[wid].col(igr) = U->Q[wid].col(icl+i);
+      U->Q[pid].col(igr) = U->Q[pid].col(icl+i);
+      U->Q[bzid].col(igr) = U->Q[bzid].col(icl+i);
+
+      //direction flip
+      U->Q[uid].col(igr) = -1*U->Q[uid].col(icl+i);
+      U->Q[vid].col(igr) = -1*U->Q[vid].col(icl+i);
+      U->Q[bxid].col(igr) = -1*U->Q[bxid].col(icl+i);
+      U->Q[byid].col(igr) = -1*U->Q[byid].col(icl+i);
+
+    }
+    /*
+       igr = (ni-C.num_ghost)+i;
+       igl = (C.num_ghost-1)-i;
 
     // Left g copy right interior
     //indepndent
     U->Q[rhoid].col(igl) = U->Q[rhoid].col(icr-i);
+    //cout << U->Q[rhoid].col(icr-i) << endl;
     U->Q[wid].col(igl) = U->Q[wid].col(icr-i);
     U->Q[pid].col(igl) = U->Q[pid].col(icr-i);
     U->Q[bzid].col(igl) = U->Q[bzid].col(icr-i);
@@ -122,6 +158,7 @@ void setBConU(Map2Eigen* U, const MatrixXd& nix, const MatrixXd& niy, const Matr
     U->Q[vid].col(igr) = -1*U->Q[vid].col(icl+i);
     U->Q[bxid].col(igr) = -1*U->Q[bxid].col(icl+i);
     U->Q[byid].col(igr) = -1*U->Q[byid].col(icl+i);
+    */
   }
 
   // top bottom slipwall
@@ -468,6 +505,8 @@ void gFlux(double G[], double U[])
 
 void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const Map2Eigen* U, constants C)
 {
+  
+  
   int ni = U_B->Q[rhoid].cols(); //ncx
   int nj = U_L->Q[rhoid].rows();//ncy
 
@@ -485,9 +524,9 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
      printf("\n nj = %ld, ni = %ld \n", U_T->Q[rhoid].rows(), U_T->Q[rhoid].cols());
      printf("\n nj = %ld, ni = %ld \n", U->Q[rhoid].rows(), U->Q[rhoid].cols());
      */
+  /*
   for(int j = 0; j < nj; j++)
   {
-
     for(int i = 0; i < ni; i++)
     {
       ig = i+C.num_ghost;
@@ -527,6 +566,7 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
       }
     }
   }
+  */
 
   // add the last layer left right
   //
@@ -890,6 +930,8 @@ void initialize(
   double lambda = circ/20;
   double randPert;
 
+  cout << nj << " "<< ni  << " " << V->Q[rhoid].cols() << " " <<V->Q[rhoid].rows() << endl;
+
   for (int j = 0; j < nj; j++)
   {
     for (int i = 0; i < ni; i++)
@@ -900,12 +942,18 @@ void initialize(
       r = sqrt(x*x+y*y);
       thet = atan2(y,x);
 
-      randPert = ((double) rand() / (RAND_MAX));
-      if(r < rmidd)//*(1.0+0.01*cos(10*abs(randPert)*thet/PI + randPert*PI)))
-        V->Q[rhoid](j,i) = rhoL;
-      else
-        V->Q[rhoid](j,i) = rhoH;
 
+      randPert = ((double) rand() / (RAND_MAX));
+      if (r > rmidd)//*(1.0+0.01*cos(10*abs(randPert)*thet/PI + randPert*PI)))
+      {
+        V->Q[rhoid](j,i) = rhoH;
+        }
+      else
+      {
+        V->Q[rhoid](j,i) = rhoL;
+        }
+
+      
       vPert =vPert;
       double decay =exp(-20.0*(r-rmidd)*(r-rmidd)/(0.25*rmidd*rmidd));
       double thetVar = randPert*(2.0*PI/lambda)*thet+randPert*PI;
@@ -1219,6 +1267,7 @@ void primToCons(
 {
   int ni = U->Q[rhoid].cols();
   int nj = U->Q[rhoid].rows();
+
   for(int j = 0; j < nj; j++)
     for(int i = 0; i < ni; i++)
     {

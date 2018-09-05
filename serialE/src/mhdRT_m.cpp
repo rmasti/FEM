@@ -13,7 +13,7 @@ int main (int argc, char * argv[])
 
   constants C;
   C.f_limiter = 7;
-  C.num_ghost = 3;
+  C.num_ghost = 0;
   C.cfl = 0.25;
   C.nmax = 10000;
   C.wint = 50;
@@ -43,7 +43,6 @@ int main (int argc, char * argv[])
   //j or y dir areas the rows or the matrix
   MatrixXd Aj(xn.rows(), xc.cols()); // sets (row,col) (j,i)
   MatrixXd Volume(xc.rows(), xc.cols());
-  cout << Volume.rows() <<  " " << Volume.cols() << endl;
 
   // SETUP NORMAL VECS
   //Ai normal vector has x and y components (so same size as Ai)
@@ -68,7 +67,7 @@ int main (int argc, char * argv[])
   // YANG YANG YANG YANG YANG THE 2 LINES BELOW
   //
   //
-  Map2Eigen *U = new Map2Eigen(nrows, ncols, NEQ);
+  Map2Eigen *U    = new Map2Eigen(nrows, ncols, NEQ);
   Map2Eigen *U_RK = new Map2Eigen(nrows, ncols, NEQ);
   Map2Eigen *V    = new Map2Eigen(nrows, ncols, NEQ);
 
@@ -96,7 +95,13 @@ int main (int argc, char * argv[])
   cout << "Initializing" << endl;
   initialize(V, xc_g, yc_g, C);
   //T = V->Q[pid].cwiseProduct(V->Q[rhoid].cwiseInverse())/R; //computeTemperature
+  outputArrayMap(outputFolder, "V", V, -1);
+  outputArrayMap(outputFolder, "U", U, -1);
+ 
   primToCons(U, V);
+  outputArrayMap(outputFolder, "V", V, -1);
+  outputArrayMap(outputFolder, "U", U, -1);
+ 
   setBConU(U, nix, niy, njx, njy, C);
   //setBC(V, nix, niy, njx, njy, T, C);
   //primToCons(U, V);
@@ -122,7 +127,7 @@ int main (int argc, char * argv[])
 
   int n = 0;
   cout << "BEFORE" << endl;
-  while(time(0,n) < tend && n < 101)
+  while(time(0,n) < tend && n < 1)
   {
     for(int k = 0; k < RKORDER; k++)
     {

@@ -27,10 +27,10 @@ Volume = load('volume-0.txt'); %checked
 
 %% Initialized vars
 
-VRho = load('V_rho-0.txt');
-Vu = load('V_u-0.txt');
-Vv = load('V_v-0.txt');
-Vp = load('V_p-0.txt');
-Vbx = load('V_bx-0.txt');
-Vby = load('V_by-0.txt');
+URho = load('V_rho-0.txt');
+Uu = load('V_u-0.txt');
+Uv = load('V_v-0.txt');
+Up = load('V_p-0.txt');
+Ubx = load('V_bx-0.txt');
+Uby = load('V_by-0.txt');
 

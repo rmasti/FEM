@@ -38,6 +38,13 @@ TESTS = \
 	test/unitTest.o
 	#src/fp_f.o\
 
+MAPTESTS = \
+	src/map2Eigen.o\
+	src/map2EigenTest.o
+	#src/fp_f.o\
+
+
+
 main:$(OBJS) 
 	$(LD)  $(LDFLAGS) -o main $(OBJS) $(LIBS)
 	rm -r $(OBJS)
@@ -45,6 +52,10 @@ main:$(OBJS)
 tests:$(TESTS)
 	$(LD)  $(LDFLAGS) -o unittest $(TESTS) $(LIBS)
 	rm -r $(TESTS)
+
+maptests:$(MAPTESTS)
+	$(LD)  $(LDFLAGS) -o maptest $(MAPTESTS) $(LIBS)
+	rm -r $(MAPTESTS)
 
 
 # what to do if user types "make clean"

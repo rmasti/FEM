@@ -51,16 +51,18 @@ using namespace Eigen;
 #define RKORDER 4         //rkorder
 
 
+
+typedef Matrix<double,Dynamic,Dynamic,RowMajor> RowMajorMatrixXd;
 // Create the Class with Eigen mapp C arr
 class Map2Eigen
 {
   public:
   
-  Map2Eigen(int ni, int nj, int nequ);
+  Map2Eigen(int nj, int ni, int nequ);
 
   double *Q_raw;
 
-  Map<MatrixXd, 0, Stride<Dynamic, Dynamic> > Q[NEQ];
+  Map<RowMajorMatrixXd, 0, Stride<Dynamic, Dynamic> > Q[NEQ];
 };
 
 
