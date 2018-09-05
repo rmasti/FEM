@@ -27,10 +27,24 @@ Volume = load('volume-0.txt'); %checked
 
 %% Initialized vars
 
-URho = load('V_rho-0.txt');
-Uu = load('V_u-0.txt');
-Uv = load('V_v-0.txt');
-Up = load('V_p-0.txt');
-Ubx = load('V_bx-0.txt');
-Uby = load('V_by-0.txt');
+URho = load('U_rho-0.txt');
+Uu = load('U_u-0.txt');
+Uv = load('U_v-0.txt');
+Up = load('U_p-0.txt');
+Ubx = load('U_bx-0.txt');
+Uby = load('U_by-0.txt');
 
+
+
+%% After
+
+
+URho = load('U_rho-1000.txt');
+Uu = load('U_u-50.txt');
+Uv = load('U_v-50.txt');
+Up = load('U_p-50.txt');
+Ubx = load('U_bx-50.txt');
+Uby = load('U_by-50.txt');
+
+figure
+contourf(xc, yc, URho(4:end-3,4:end-3), 40, 'LineStyle','none');

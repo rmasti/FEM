@@ -94,43 +94,9 @@ void setBConU(Map2Eigen* U, const MatrixXd& nix, const MatrixXd& niy, const Matr
   icr = ni-C.num_ghost-1;
   for(int i = 0; i < C.num_ghost; i++)
   {
-    for(int j = C.num_ghost; j < nj-C.num_ghost; j++)
-    {
     
-      igr = (ni-C.num_ghost)+i;
-      igl = (C.num_ghost-1)-i;
-
-      // Left g copy right interior
-      //indepndent
-      U->Q[rhoid].col(igl) = U->Q[rhoid].col(icr-i);
-      //cout << U->Q[rhoid].col(icr-i) << endl;
-      U->Q[wid].col(igl) = U->Q[wid].col(icr-i);
-      U->Q[pid].col(igl) = U->Q[pid].col(icr-i);
-      U->Q[bzid].col(igl) = U->Q[bzid].col(icr-i);
-
-      //direction flip
-      U->Q[uid].col(igl) = -1*U->Q[uid].col(icr-i);
-      U->Q[vid].col(igl) = -1*U->Q[vid].col(icr-i);
-      U->Q[bxid].col(igl) = -1*U->Q[bxid].col(icr-i);
-      U->Q[byid].col(igl) = -1*U->Q[byid].col(icr-i);
-
-      // Right g copy left interior
-      //indepndent
-      U->Q[rhoid].col(igr) = U->Q[rhoid].col(icl+i);
-      U->Q[wid].col(igr) = U->Q[wid].col(icl+i);
-      U->Q[pid].col(igr) = U->Q[pid].col(icl+i);
-      U->Q[bzid].col(igr) = U->Q[bzid].col(icl+i);
-
-      //direction flip
-      U->Q[uid].col(igr) = -1*U->Q[uid].col(icl+i);
-      U->Q[vid].col(igr) = -1*U->Q[vid].col(icl+i);
-      U->Q[bxid].col(igr) = -1*U->Q[bxid].col(icl+i);
-      U->Q[byid].col(igr) = -1*U->Q[byid].col(icl+i);
-
-    }
-    /*
-       igr = (ni-C.num_ghost)+i;
-       igl = (C.num_ghost-1)-i;
+    igr = (ni-C.num_ghost)+i;
+    igl = (C.num_ghost-1)-i;
 
     // Left g copy right interior
     //indepndent
@@ -158,7 +124,6 @@ void setBConU(Map2Eigen* U, const MatrixXd& nix, const MatrixXd& niy, const Matr
     U->Q[vid].col(igr) = -1*U->Q[vid].col(icl+i);
     U->Q[bxid].col(igr) = -1*U->Q[bxid].col(icl+i);
     U->Q[byid].col(igr) = -1*U->Q[byid].col(icl+i);
-    */
   }
 
   // top bottom slipwall
@@ -199,16 +164,18 @@ void setBConU(Map2Eigen* U, const MatrixXd& nix, const MatrixXd& niy, const Matr
       U->Q[bxid](jgb,i) = -nx*(bx*nx+by*ny) - ny*(-bx*ny + by*nx); 
       U->Q[byid](jgb,i) = -ny*(bx*nx+by*ny) + nx*(-bx*ny + by*nx);
       // extrapolate
-      /*
       U->Q[rhoid](jgb,i) = 2.0*U->Q[rhoid](jgb+1,i) - U->Q[rhoid](jgb+2,i);
       U->Q[wid](jgb,i) = 2.0*U->Q[wid](jgb+1,i) - U->Q[wid](jgb+2,i);
       U->Q[pid](jgb,i) = 2.0*U->Q[pid](jgb+1,i) - U->Q[pid](jgb+2,i);
       U->Q[bzid](jgb,i) = 2.0*U->Q[bzid](jgb+1,i) - U->Q[bzid](jgb+2,i);
-      */
+
+      /*
          U->Q[rhoid](jgb,i) = U->Q[rhoid](jgb+1,i);// - U->Q[rhoid](jgb+2,i);
          U->Q[wid](jgb,i) = U->Q[wid](jgb+1,i);// - U->Q[wid](jgb+2,i);
          U->Q[pid](jgb,i) = U->Q[pid](jgb+1,i);// - U->Q[pid](jgb+2,i);
          U->Q[bzid](jgb,i) = U->Q[bzid](jgb+1,i);// - U->Q[bzid](jgb+2,i);
+
+*/
 
       // horizontal boundary upper
       nx = njx(jft,iff); 
@@ -225,18 +192,18 @@ void setBConU(Map2Eigen* U, const MatrixXd& nix, const MatrixXd& niy, const Matr
       U->Q[byid](jgt,i) = -ny*(bx*nx+by*ny) + nx*(-bx*ny + by*nx);
 
       // extrapolate
-      /*
       U->Q[rhoid](jgt,i) = 2.0*U->Q[rhoid](jgt-1,i) - U->Q[rhoid](jgt-2,i);
       U->Q[wid](jgt,i) = 2.0*U->Q[wid](jgt-1,i) - U->Q[wid](jgt-2,i);
       U->Q[pid](jgt,i) = 2.0*U->Q[pid](jgt-1,i) - U->Q[pid](jgt-2,i);
       U->Q[bzid](jgt,i) = 2.0*U->Q[bzid](jgt-1,i) - U->Q[bzid](jgt-2,i);
-      */
 
+      /*
          U->Q[rhoid](jgt,i) = U->Q[rhoid](jgt-1,i);// - U->Q[rhoid](jgt-2,i);
          U->Q[wid](jgt,i) = U->Q[wid](jgt-1,i);// - U->Q[wid](jgt-2,i);
          U->Q[pid](jgt,i) = U->Q[pid](jgt-1,i);// - U->Q[pid](jgt-2,i);
          U->Q[bzid](jgt,i) =U->Q[bzid](jgt-1,i);// - U->Q[bzid](jgt-2,i);
 
+*/
 
     }
   }
@@ -325,9 +292,9 @@ void computeSourceTerm(Map2Eigen* S, Map2Eigen* U, const MatrixXd& xc, const Mat
     {
       ig = i + C.num_ghost;
       thet = atan2(yc(j,i), xc(j,i));
-         S->Q[uid](j,i) = -1*(U->Q[rhoid](jg,ig))*(g)*cos(thet);
-         S->Q[vid](j,i) = -1*(U->Q[rhoid](jg,ig))*(g)*sin(thet);
-         S->Q[pid](j,i) = ((S->Q[uid](j,i)*-1*g*cos(thet)) + (S->Q[vid](j,i)*-1*g*sin(thet)));//U->Q[rhoid](jg,ig) ;
+      S->Q[uid](j,i) = -1*(U->Q[rhoid](jg,ig))*(g)*cos(thet);
+      S->Q[vid](j,i) = -1*(U->Q[rhoid](jg,ig))*(g)*sin(thet);
+      S->Q[pid](j,i) = ((S->Q[uid](j,i)*-1*g*cos(thet)) + (S->Q[vid](j,i)*-1*g*sin(thet)));//U->Q[rhoid](jg,ig) ;
     }
   }
 }
@@ -352,13 +319,11 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
         ut[eq] = U_T->Q[eq](j,i);
       }
 
-      computeFlux(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
-      computeFlux(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
+      //computeFlux(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
+      //computeFlux(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
 
-      /*
-      computeFluxVL(FFLUX, ul, ur, nix(j,i), niy(j,i));
-      computeFluxVL(GFLUX, ub, ut, njx(j,i), njy(j,i));
-      */
+         computeFluxVL(FFLUX, ul, ur, nix(j,i), niy(j,i));
+         computeFluxVL(GFLUX, ub, ut, njx(j,i), njy(j,i));
 
 
       for(int eq = 0; eq < NEQ; eq++)
@@ -379,8 +344,8 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
 
     }
 
-    computeFlux(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
-    //computeFluxVL(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
+    //computeFlux(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
+    computeFluxVL(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
     for(int eq = 0; eq < NEQ; eq++)
       F->Q[eq](j,ni) = FFLUX[eq];
   }
@@ -394,8 +359,8 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
       ut[eq] = U_T->Q[eq](nj,i);
 
     }
-    computeFlux(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
-    //computeFluxVL(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
+    //computeFlux(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
+    computeFluxVL(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
     for(int eq = 0; eq < NEQ; eq++)
       G->Q[eq](nj,i) = GFLUX[eq];
   }
@@ -505,8 +470,8 @@ void gFlux(double G[], double U[])
 
 void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const Map2Eigen* U, constants C)
 {
-  
-  
+
+
   int ni = U_B->Q[rhoid].cols(); //ncx
   int nj = U_L->Q[rhoid].rows();//ncy
 
@@ -524,7 +489,6 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
      printf("\n nj = %ld, ni = %ld \n", U_T->Q[rhoid].rows(), U_T->Q[rhoid].cols());
      printf("\n nj = %ld, ni = %ld \n", U->Q[rhoid].rows(), U->Q[rhoid].cols());
      */
-  /*
   for(int j = 0; j < nj; j++)
   {
     for(int i = 0; i < ni; i++)
@@ -566,7 +530,6 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
       }
     }
   }
-  */
 
   // add the last layer left right
   //
@@ -609,7 +572,6 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
       U_T->Q[eq](nj,i) = U->Q[eq](jg,ig)-0.5*theta_T*(U->Q[eq](jg+1,ig)-U->Q[eq](jg,ig));             
     }
   }
-
 }
 
 
@@ -920,7 +882,8 @@ void initialize(
   double x, y, r, thet;
   double rhoL = 1.0;
   double rhoH = 2.0;
-  double p0 = 5.5;
+
+  double p0 = 2.5;
   double g = 0.1;
 
   double vPert = 0.0;
@@ -947,13 +910,13 @@ void initialize(
       if (r > rmidd)//*(1.0+0.01*cos(10*abs(randPert)*thet/PI + randPert*PI)))
       {
         V->Q[rhoid](j,i) = rhoH;
-        }
+      }
       else
       {
         V->Q[rhoid](j,i) = rhoL;
-        }
+      }
 
-      
+
       vPert =vPert;
       double decay =exp(-20.0*(r-rmidd)*(r-rmidd)/(0.25*rmidd*rmidd));
       double thetVar = randPert*(2.0*PI/lambda)*thet+randPert*PI;
@@ -1360,6 +1323,7 @@ void computeFluxVL(double* FFLUX, double* ul, double* ur, double nxhat, double n
   double vl[NEQ];
   double vr[NEQ];
 
+
   cons2Prim(vl, ul, NEQ);
   cons2Prim(vr, ur, NEQ);
   // compute sound speed
@@ -1407,24 +1371,24 @@ void computeFluxVL(double* FFLUX, double* ul, double* ur, double nxhat, double n
 
 
   // compute convective flux contribution
-  Fc[0] = vl[rhoid]*a_L*c_p + vr[rhoid]*a_R*c_n;
+  Fc[rhoid] = vl[rhoid]*a_L*c_p + vr[rhoid]*a_R*c_n;
 
-  Fc[1] = vl[rhoid]*a_L*c_p*vl[uid] 
+  Fc[uid] = vl[rhoid]*a_L*c_p*vl[uid] 
     + vr[rhoid]*a_R*c_n*vr[uid];
 
-  Fc[2] = vl[rhoid]*a_L*c_p*vl[vid] 
+  Fc[vid] = vl[rhoid]*a_L*c_p*vl[vid] 
     + vr[rhoid]*a_R*c_n*vr[vid];
 
-  Fc[3] = vl[rhoid]*a_L*c_p*ht_L 
+  Fc[pid] = vl[rhoid]*a_L*c_p*ht_L 
     + vr[rhoid]*a_R*c_n*ht_R;
 
   // compute pressure flux contribution
-  Fp[0] = 0.0;
-  Fp[1] = D_p*nxhat*vl[pid] + 
+  Fp[rhoid] = 0.0;
+  Fp[uid] = D_p*nxhat*vl[pid] + 
     D_n*nxhat*vr[pid];
-  Fp[2] = D_p*nyhat*vl[pid] + 
+  Fp[vid] = D_p*nyhat*vl[pid] + 
     D_n*nyhat*vr[pid];
-  Fp[3] = 0.0;
+  Fp[pid] = 0.0;
 
   // loop over and add the two
   for (int eq = 0; eq < NEQ; eq++)

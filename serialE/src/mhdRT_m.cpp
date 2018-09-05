@@ -13,11 +13,11 @@ int main (int argc, char * argv[])
 
   constants C;
   C.f_limiter = 7;
-  C.num_ghost = 0;
+  C.num_ghost = 3;
   C.cfl = 0.25;
   C.nmax = 10000;
-  C.wint = 50;
-  C.pint = 1;
+  C.wint = 100;
+  C.pint = 10;
   double A = (2-1)/(1.0+2.0);
   double tend = 6.0/sqrt(A*0.1*2);
 
@@ -93,10 +93,10 @@ int main (int argc, char * argv[])
   computeVolume(Volume, xn, yn); // Checked
 
   cout << "Initializing" << endl;
-  initialize(V, xc_g, yc_g, C);
+  initialize(V, xc_g, yc_g, C); // Checked
   //T = V->Q[pid].cwiseProduct(V->Q[rhoid].cwiseInverse())/R; //computeTemperature
-  outputArrayMap(outputFolder, "V", V, -1);
-  outputArrayMap(outputFolder, "U", U, -1);
+  outputArrayMap(outputFolder, "V", V, -2);
+  outputArrayMap(outputFolder, "U", U, -2);
  
   primToCons(U, V);
   outputArrayMap(outputFolder, "V", V, -1);
@@ -127,7 +127,7 @@ int main (int argc, char * argv[])
 
   int n = 0;
   cout << "BEFORE" << endl;
-  while(time(0,n) < tend && n < 1)
+  while(time(0,n) < tend && n < 1001)
   {
     for(int k = 0; k < RKORDER; k++)
     {
