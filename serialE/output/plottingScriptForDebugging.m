@@ -39,7 +39,7 @@ Uby = load('U_by-0.txt');
 %% After
 
 
-URho = load('U_rho-1000.txt');
+URho = load('U_rho-100.txt');
 Uu = load('U_u-50.txt');
 Uv = load('U_v-50.txt');
 Up = load('U_p-50.txt');
@@ -47,4 +47,4 @@ Ubx = load('U_bx-50.txt');
 Uby = load('U_by-50.txt');
 
 figure
-contourf(xc, yc, URho(4:end-3,4:end-3), 40, 'LineStyle','none');
+contourf(xc, yc, URho(4:end-3,4:end-3), 4, 'LineStyle','none');

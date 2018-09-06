@@ -36,6 +36,7 @@ using namespace Eigen;
 #define MU0 1.0
 #define PI 3.14159265359
 #define NEQ 8
+#define ACCEL 0.1
 #define DEBUG false
 
 // DEFINE ELEMENT IDENTIFIERS
@@ -114,7 +115,9 @@ void computeFluxVL(double* FFLUX, double* ul,double* ur, double nxhat, double ny
 
 void computeFluxRoe(double* FFLUX, double* ul, double* ur, double nxhat, double nyhat);
 
-double computeMaxSpeed(double V[]); 
+void computeFluxHLLD(double F[], double UL[], double UR[], double& nxhat, double& nyhat);
+
+double computeMaxSpeed(double V[], int ForG); 
 
 
 void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T, const Map2Eigen* U, constants C);
@@ -129,7 +132,7 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L , Map2Eigen* U_R,
 
 void computeFluxHLL(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG);
 
-void fFlux(double F[], double U[]);
+void fFlux(double F[], double U[], double nxhat, double nyhat);
 
 void gFlux(double G[], double U[]);
 
