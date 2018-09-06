@@ -112,6 +112,8 @@ double computeTimeStepU(MatrixXd& Volume, MatrixXd& Ai, MatrixXd& Aj, MatrixXd& 
 
 void computeFluxVL(double* FFLUX, double* ul,double* ur, double nxhat, double nyhat);
 
+void computeFluxRoe(double* FFLUX, double* ul, double* ur, double nxhat, double nyhat);
+
 double computeMaxSpeed(double V[]); 
 
 
@@ -125,7 +127,7 @@ double limiter(double& r, constants C);
 
 void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L , Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T, MatrixXd& njx, MatrixXd& njy, MatrixXd& nix, MatrixXd& niy, constants C);
 
-void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG);
+void computeFluxHLL(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG);
 
 void fFlux(double F[], double U[]);
 

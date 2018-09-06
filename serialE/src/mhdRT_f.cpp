@@ -20,7 +20,6 @@ double computeTimeStepU(
     constants C            // input - constants for the CFL number
     )
 {
-
   int ni = Volume.cols();
   int nj = Volume.rows();
 
@@ -94,7 +93,7 @@ void setBConU(Map2Eigen* U, const MatrixXd& nix, const MatrixXd& niy, const Matr
   icr = ni-C.num_ghost-1;
   for(int i = 0; i < C.num_ghost; i++)
   {
-    
+
     igr = (ni-C.num_ghost)+i;
     igl = (C.num_ghost-1)-i;
 
@@ -319,11 +318,14 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
         ut[eq] = U_T->Q[eq](j,i);
       }
 
-      //computeFlux(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
-      //computeFlux(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
+      //computeFluxHLL(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
+      //computeFluxHLL(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
 
-         computeFluxVL(FFLUX, ul, ur, nix(j,i), niy(j,i));
-         computeFluxVL(GFLUX, ub, ut, njx(j,i), njy(j,i));
+      //computeFluxVL(FFLUX, ul, ur, nix(j,i), niy(j,i));
+      //computeFluxVL(GFLUX, ub, ut, njx(j,i), njy(j,i));
+
+      computeFluxRoe(FFLUX, ul, ur, nix(j,i), niy(j,i));
+      computeFluxRoe(GFLUX, ub, ut, njx(j,i), njy(j,i));
 
 
       for(int eq = 0; eq < NEQ; eq++)
@@ -344,8 +346,9 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
 
     }
 
-    //computeFlux(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
-    computeFluxVL(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
+    //computeFluxHLL(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
+    //computeFluxVL(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
+    computeFluxRoe(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
     for(int eq = 0; eq < NEQ; eq++)
       F->Q[eq](j,ni) = FFLUX[eq];
   }
@@ -359,14 +362,15 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
       ut[eq] = U_T->Q[eq](nj,i);
 
     }
-    //computeFlux(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
-    computeFluxVL(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
+    //computeFluxHLL(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
+    //computeFluxVL(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
+    computeFluxRoe(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
     for(int eq = 0; eq < NEQ; eq++)
       G->Q[eq](nj,i) = GFLUX[eq];
   }
 }
 
-void computeFlux(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG)
+void computeFluxHLL(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG)
 {
 
 
@@ -907,7 +911,7 @@ void initialize(
 
 
       randPert = ((double) rand() / (RAND_MAX));
-      if (r > rmidd)//*(1.0+0.01*cos(10*abs(randPert)*thet/PI + randPert*PI)))
+      if (r > rmidd*(1.0+0.01*cos(10*abs(randPert)*thet/PI + randPert*PI)))
       {
         V->Q[rhoid](j,i) = rhoH;
       }
@@ -1394,5 +1398,147 @@ void computeFluxVL(double* FFLUX, double* ul, double* ur, double nxhat, double n
   for (int eq = 0; eq < NEQ; eq++)
     FFLUX[eq] = Fc[eq] + Fp[eq];
 }
+
+
+void computeFluxRoe(double* FFLUX, double* ul, double* ur, double nxhat, double nyhat)
+{
+  // define roe averaged vars
+  double rho_Roe;
+  double u_Roe;
+  double v_Roe;
+  double U_hat_Roe_R, U_hat_Roe_L;
+  double U_hat_Roe;
+  double ht_L, ht_R;
+  double ht_Roe;
+  double a_Roe;
+  double R_Roe;
+
+  // Get prim var
+  double vl[NEQ];
+  double vr[NEQ];
+
+  cons2Prim(vl, ul, NEQ);
+  cons2Prim(vr, ur, NEQ);
+
+  // need delta's to compute the characteristic vars
+  double drho, du, dv, dp;
+  double dw1, dw2, dw3, dw4;
+
+  // eigen vals
+  double lambda1, lambda2, lambda3, lambda4;
+  double eps = 0.1; // correction term
+  // right eigen vectors
+  double r1[NEQ], r2[NEQ], r3[NEQ], r4[NEQ];
+
+  // Used to find the 1st order contribution to the flux determination
+  double F_L[NEQ];
+  double F_R[NEQ];
+
+  // 2nd order contribution
+  double sum2ndOrder;
+
+  //int ni = vl[uid];
+  //int nj = vl[uid].rows();
+
+  // compute roe avgd quantities like before
+  R_Roe = sqrt(vr[rhoid]/vl[rhoid]);
+  rho_Roe = R_Roe*vl[rhoid];
+  u_Roe = (R_Roe*vr[uid] + vl[uid]) / (R_Roe + 1);
+  v_Roe = (R_Roe*vr[vid] + vl[vid]) / (R_Roe + 1);
+  // Find the 2D effect on the speed
+  U_hat_Roe = u_Roe*nxhat + v_Roe*nyhat;// get the speed
+
+  // Roe averaged vars
+  ht_L = (GAMMA/(GAMMA-1))*vl[pid]/vl[rhoid] 
+    + 0.5*( vl[uid]*vl[uid] + vl[vid]*vl[vid]);
+  ht_R = (GAMMA/(GAMMA-1))*vr[pid]/vr[rhoid] 
+    + 0.5*( vr[uid]*vr[uid] + vr[vid]*vr[vid]);
+  ht_Roe = (R_Roe*ht_R + ht_L) / (R_Roe + 1);
+
+  // sound speed with the energy uu+vv (2D)
+  a_Roe = sqrt((GAMMA-1)*( ht_Roe - 0.5*(u_Roe*u_Roe + v_Roe*v_Roe)));
+
+  // Two of the eigen values are repeated
+  lambda1 = abs(U_hat_Roe); // speed 
+  lambda2 = abs(U_hat_Roe); // speed
+  lambda3 = abs(U_hat_Roe + a_Roe); // u+a 1D
+  lambda4 = abs(U_hat_Roe - a_Roe); // u-a 1D
+
+  // apply expansion fan fix
+  // fix the repeated eigen values (u) 
+  if (lambda1 < 2*eps*a_Roe)
+  {
+    lambda1 = lambda1*lambda1/(4*eps*a_Roe) + eps*a_Roe;
+    lambda2 = lambda2*lambda2/(4*eps*a_Roe) + eps*a_Roe;
+  }
+  // fix the u+a and u-a
+  if (lambda3 < 2*eps*a_Roe)
+    lambda3 = lambda3*lambda3/(4*eps*a_Roe) + eps*a_Roe;
+  if (lambda4 < 2*eps*a_Roe)
+    lambda4 = lambda4*lambda4/(4*eps*a_Roe) + eps*a_Roe;
+
+  // fill in the right eigen vectors
+  r1[rhoid] = 1.0;
+  r1[uid] = u_Roe;
+  r1[vid] = v_Roe;
+  r1[pid] = 0.5*(u_Roe*u_Roe + v_Roe*v_Roe);
+
+  r2[rhoid] = 0.0;
+  r2[uid] = rho_Roe * nyhat;
+  r2[vid] = -rho_Roe * nxhat;
+  r2[pid] = rho_Roe*(u_Roe*nyhat - v_Roe*nxhat);
+
+  r3[rhoid] = (0.5*rho_Roe/a_Roe);
+  r3[uid] = (0.5*rho_Roe/a_Roe) * ( u_Roe + a_Roe*nxhat );
+  r3[vid] = (0.5*rho_Roe/a_Roe) * ( v_Roe + a_Roe*nyhat );
+  r3[pid] = (0.5*rho_Roe/a_Roe) * ( ht_Roe + a_Roe*U_hat_Roe );
+
+  r4[rhoid] = (-0.5*rho_Roe/a_Roe);
+  r4[uid] = (-0.5*rho_Roe/a_Roe) * ( u_Roe - a_Roe*nxhat );
+  r4[vid] = (-0.5*rho_Roe/a_Roe) * ( v_Roe - a_Roe*nyhat );
+  r4[pid] = (-0.5*rho_Roe/a_Roe) * ( ht_Roe - a_Roe*U_hat_Roe );
+
+  // compute delta's
+  drho = vr[rhoid] - vl[rhoid];
+  du = vr[uid] - vl[uid];
+  dv = vr[vid] - vl[vid];
+  dp = vr[pid] - vl[pid];
+
+  // compute characteristic variables
+  dw1 = drho - dp/(a_Roe*a_Roe);
+  dw2 = du*nyhat - dv*nxhat;
+  dw3 = du*nxhat + dv*nyhat + dp/(rho_Roe*a_Roe);
+  dw4 = du*nxhat + dv*nyhat - dp/(rho_Roe*a_Roe);
+
+  // convert the reimann problem to 1d
+  U_hat_Roe_L = ( vl[uid]*nxhat + vl[vid]*nyhat);
+  U_hat_Roe_R = ( vr[uid]*nxhat + vr[vid]*nyhat);
+
+  // grab the first order contributions
+  F_L[rhoid] = vl[rhoid]*U_hat_Roe_L;
+  F_R[rhoid] = vr[rhoid]*U_hat_Roe_R;
+
+  F_L[uid] = vl[rhoid]*vl[uid]*U_hat_Roe_L + vl[pid]*nxhat;
+  F_R[uid] = vr[rhoid]*vr[uid]*U_hat_Roe_R + vr[pid]*nxhat;
+
+  F_L[vid] = vl[rhoid]*vl[vid]*U_hat_Roe_L + vl[pid]*nyhat;
+  F_R[vid] = vr[rhoid]*vr[vid]*U_hat_Roe_R + vr[pid]*nyhat;
+
+  F_L[pid] = vl[rhoid]*ht_L*U_hat_Roe_L;
+  F_R[pid] = vr[rhoid]*ht_R*U_hat_Roe_R;
+
+  // Combine 1st order and 2nd order
+  // sum over the right vectors
+  for (int eq = 0; eq < NEQ; eq++)
+  {
+    sum2ndOrder=0.5*(abs(lambda1)*dw1*r1[eq]
+        + abs(lambda2)*dw2*r2[eq]
+        + abs(lambda3)*dw3*r3[eq]
+        + abs(lambda4)*dw4*r4[eq]);
+    // flux = 1st order - 2ndordersum(vec(r)*vec(dw)*abs(lambda)
+    FFLUX[eq] = 0.5*(F_L[eq]+F_R[eq]) - sum2ndOrder;
+  }
+}
+
 
 

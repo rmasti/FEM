@@ -14,15 +14,15 @@ int main (int argc, char * argv[])
   constants C;
   C.f_limiter = 7;
   C.num_ghost = 3;
-  C.cfl = 0.25;
+  C.cfl = 0.5;
   C.nmax = 10000;
-  C.wint = 100;
+  C.wint = 500;
   C.pint = 10;
   double A = (2-1)/(1.0+2.0);
   double tend = 6.0/sqrt(A*0.1*2);
 
-  string outputFolder =  "./output/";
-  //string outputFolder =  "/mnt/c/Users/rlm78/Desktop/matlabstuff/";
+  //string outputFolder =  "./output/";
+  string outputFolder =  "/mnt/c/Users/rlm78/Desktop/matlabstuff/";
   string mesh = "mesh/debugMatlab.msh";
 
   ///////////////// READ IN THE MESH ///////////////////
@@ -127,7 +127,7 @@ int main (int argc, char * argv[])
 
   int n = 0;
   cout << "BEFORE" << endl;
-  while(time(0,n) < tend && n < 1001)
+  while(time(0,n) < tend)// && n < 1001)
   {
     for(int k = 0; k < RKORDER; k++)
     {
@@ -168,7 +168,7 @@ int main (int argc, char * argv[])
     }
 
     if(n%C.pint == 0)
-      cout << "time  =" << time(0,n) << endl;
+      cout << "time  = " << time(0,n) << ", n = " << n << endl;
   }
 
 
