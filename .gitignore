@@ -11,5 +11,6 @@
 *.snm
 *.vrb
 *.nav
+*.swo
 main
 eigen/*
