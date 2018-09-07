@@ -19,10 +19,10 @@ int main (int argc, char * argv[])
   C.wint = 100;
   C.pint = 10;
   double A = (2-1)/(1.0+2.0);
-  double tend = 6.0/sqrt(A*0.1*2);
+  double tend = 6.0/sqrt(A*ACCEL*2);
 
-  string outputFolder =  "./output/";
-  //string outputFolder =  "/mnt/c/Users/rlm78/Desktop/matlabstuff/";
+  //string outputFolder =  "./output/";
+  string outputFolder =  "/mnt/c/Users/rlm78/Desktop/matlabstuff/";
   string mesh = "mesh/debugMatlab.msh";
 
   ///////////////// READ IN THE MESH ///////////////////

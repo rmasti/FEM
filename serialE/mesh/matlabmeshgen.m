@@ -4,7 +4,7 @@
 clc, clear, close all
 
 
-ny = 64;
+ny = 128;
 nx = ny*3;
 
 % r and theta coordinates

@@ -329,8 +329,8 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
       //computeFluxRoe(FFLUX, ul, ur, nix(j,i), niy(j,i));
       //computeFluxRoe(GFLUX, ub, ut, njx(j,i), njy(j,i));
 
-      //computeFluxHLLD(FFLUX, ul, ur, nix(j,i), niy(j,i));
-      //computeFluxHLLD(GFLUX, ub, ut, njx(j,i), njy(j,i));
+      //computeFluxHLLD(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
+      //computeFluxHLLD(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
 
 
 
@@ -355,7 +355,7 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
     computeFluxHLL(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
     //computeFluxVL(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
     //computeFluxRoe(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
-    //computeFluxHLLD(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
+    //computeFluxHLLD(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
     for(int eq = 0; eq < NEQ; eq++)
       F->Q[eq](j,ni) = FFLUX[eq];
   }
@@ -372,7 +372,7 @@ void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R
     computeFluxHLL(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
     //computeFluxVL(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
     //computeFluxRoe(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
-    //computeFluxHLLD(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
+    //computeFluxHLLD(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
     for(int eq = 0; eq < NEQ; eq++)
       G->Q[eq](nj,i) = GFLUX[eq];
   }
@@ -382,7 +382,7 @@ void computeFluxHLL(double F[], double UA[], double UB[], double& nxhat, double&
 {
 
 
-  
+
   double CA = computeMaxSpeed(UA, ForG);
   double CB = computeMaxSpeed(UB, ForG);
 
@@ -405,8 +405,8 @@ void computeFluxHLL(double F[], double UA[], double UB[], double& nxhat, double&
   }
   else if (ForG == 1)
   {
-    gFlux(FA, UA);
-    gFlux(FB, UB);
+    gFlux(FA, UA, nxhat, nyhat);
+    gFlux(FB, UB, nxhat, nyhat);
   }
   else
   {
@@ -437,46 +437,96 @@ void fFlux(double F[], double U[], double nxhat, double nyhat)
   cons2Prim(V, U, NEQ);
 
 
-  F[rhoid] = V[rhoid]*V[uid]; 
-  F[uid] = V[rhoid]*V[uid]*V[uid] - (V[bxid]*V[bxid])/MU0 + V[pid] + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])/(2*MU0);
+  double uHat = V[uid]*nxhat+V[vid]*nyhat;
+  double bxHat = V[bxid]*nxhat+V[byid]*nyhat;
 
-  F[vid] = V[rhoid]*V[uid]*V[vid]- V[bxid]*V[byid]/MU0;
+  F[rhoid] = V[rhoid]*uHat; 
+  F[uid] = V[rhoid]*V[uid]*uHat - V[bxid]*bxHat/MU0 + V[pid]*nxhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nxhat/(2*MU0);
 
-  F[wid] = V[rhoid]*V[uid]*V[wid] - V[bxid]*V[bzid]/MU0;
+  F[vid] = V[rhoid]*uHat*V[vid]- bxHat*V[byid]/MU0+ V[pid]*nyhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nyhat/(2*MU0);
+
+  F[wid] = V[rhoid]*uHat*V[wid] - bxHat*V[bzid]/MU0;
 
   e = V[pid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
 
-  F[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*V[uid] - (1/MU0)*V[bxid]*(V[uid]*V[bxid]+V[vid]*V[byid]+V[wid]*V[bzid]);
+  F[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*uHat - (1/MU0)*bxHat*(V[uid]*V[bxid]+V[vid]*V[byid]+V[wid]*V[bzid]);
 
-  F[bxid] = 0;
+  F[bxid] = uHat*V[bxid]-V[uid]*bxHat;
 
-  F[byid] = V[uid]*V[byid]-V[vid]*V[bxid];
+  F[byid] = uHat*V[byid]-V[vid]*bxHat;
 
-  F[bzid] = V[uid]*V[bzid]-V[wid]*V[bxid];
+  F[bzid] = uHat*V[bzid]-V[wid]*bxHat;
+
+  //for(int eq=0; eq < NEQ; eq++)
+  //F[eq] = 0.0;
+  /*
+     F[rhoid] = V[rhoid]*V[uid]; 
+     F[uid] = V[rhoid]*V[uid]*V[uid] - (V[bxid]*V[bxid])/MU0 + V[pid] + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])/(2*MU0);
+
+     F[vid] = V[rhoid]*V[uid]*V[vid]- V[bxid]*V[byid]/MU0;
+
+     F[wid] = V[rhoid]*V[uid]*V[wid] - V[bxid]*V[bzid]/MU0;
+
+     e = V[pid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
+
+     F[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*V[uid] - (1/MU0)*V[bxid]*(V[uid]*V[bxid]+V[vid]*V[byid]+V[wid]*V[bzid]);
+
+     F[bxid] = 0;
+
+     F[byid] = V[uid]*V[byid]-V[vid]*V[bxid];
+
+     F[bzid] = V[uid]*V[bzid]-V[wid]*V[bxid];
+     */
 }
-void gFlux(double G[], double U[])
+void gFlux(double G[], double U[], double nxhat, double nyhat)
 {
   double e;
   double V[NEQ];
   cons2Prim(V, U, NEQ);
 
-  G[rhoid] = V[rhoid]*V[vid];
+  double vHat = V[uid]*nxhat+V[vid]*nyhat;
+  double byHat = V[bxid]*nxhat+V[byid]*nyhat;
 
-  G[uid] = V[rhoid]*V[uid]*V[vid]- V[bxid]*V[byid]/MU0;
 
-  G[vid] = V[rhoid]*V[vid]*V[vid] - (V[byid]*V[byid])/MU0 + V[pid] + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])/(2*MU0);
+  G[rhoid] = V[rhoid]*vHat;
 
-  G[wid] = V[rhoid]*V[vid]*V[wid]-V[byid]*V[bzid]/MU0;
+  G[uid] = V[rhoid]*V[uid]*vHat- V[bxid]*byHat/MU0 + V[pid]*nxhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nxhat/(2*MU0);
+
+  G[vid] = V[rhoid]*V[vid]*vHat - V[byid]*byHat/MU0 + V[pid]*nyhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nyhat/(2*MU0);
+
+  G[wid] = V[rhoid]*vHat*V[wid]-byHat*V[bzid]/MU0;
 
   e = V[pid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
 
-  G[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*V[vid] - (1/MU0)*V[byid]*(V[uid]*V[bxid]+V[vid]*V[byid]+ V[wid]*V[bzid]);
+  G[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*vHat - (1/MU0)*byHat*(V[uid]*V[bxid]+V[vid]*V[byid]+ V[wid]*V[bzid]);
 
-  G[bxid] = V[vid]*V[bxid]-V[uid]*V[byid];
+  G[bxid] = vHat*V[bxid]-V[uid]*byHat;
 
-  G[byid] = 0;
+  G[byid] = vHat*V[byid]-V[vid]*byHat;
 
-  G[bzid] = V[vid]*V[bzid]-V[wid]*V[byid];
+  G[bzid] = vHat*V[bzid]-V[wid]*byHat;
+
+  //for(int eq=0; eq < NEQ; eq++)
+  //G[eq] = 0.0;
+  /*
+     G[rhoid] = V[rhoid]*V[vid];
+
+     G[uid] = V[rhoid]*V[uid]*V[vid]- V[bxid]*V[byid]/MU0;
+
+     G[vid] = V[rhoid]*V[vid]*V[vid] - (V[byid]*V[byid])/MU0 + V[pid] + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])/(2*MU0);
+
+     G[wid] = V[rhoid]*V[vid]*V[wid]-V[byid]*V[bzid]/MU0;
+
+     e = V[pid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
+
+     G[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*V[vid] - (1/MU0)*V[byid]*(V[uid]*V[bxid]+V[vid]*V[byid]+ V[wid]*V[bzid]);
+
+     G[bxid] = V[vid]*V[bxid]-V[uid]*V[byid];
+
+     G[byid] = 0;
+
+     G[bzid] = V[vid]*V[bzid]-V[wid]*V[byid];
+     */
 }
 
 
@@ -911,11 +961,9 @@ void initialize(
   double vPert = 0.0;
   double rmidd= 0.375;
   double circ = 2.0*PI*rmidd;
-  double Bx = 0.0;//;0625;//125;//125;
+  double Bx = 0.0125;//125;
   double lambda = circ/20;
   double randPert;
-
-  cout << nj << " "<< ni  << " " << V->Q[rhoid].cols() << " " <<V->Q[rhoid].rows() << endl;
 
   for (int j = 0; j < nj; j++)
   {
@@ -1559,12 +1607,12 @@ void computeFluxRoe(double* FFLUX, double* ul, double* ur, double nxhat, double 
 }
 
 
-void computeFluxHLLD(double F[], double UL[], double UR[], double& nxhat, double& nyhat)
+void computeFluxHLLD(double F[], double UL[], double UR[], double& nxhat, double& nyhat, int ForG)
 {
 
 
-  double CL = computeMaxSpeed(UL, 0);
-  double CR = computeMaxSpeed(UR, 0);
+  double CL = computeMaxSpeed(UL, ForG);
+  double CR = computeMaxSpeed(UR, ForG);
 
   double rhoL = UL[rhoid];
   double rhoR = UR[rhoid];
@@ -1699,50 +1747,68 @@ void computeFluxHLLD(double F[], double UL[], double UR[], double& nxhat, double
   URss[byid] =   byRss;
   URss[bzid] =   bzRss;
 
-  if (SL > 0)
-    fFlux(F, UL, nxhat, nyhat);
-  if (SL <= 0 && SLs >= 0)
-    fFlux(F, ULs, nxhat, nyhat);
-  if (SLs <= 0 && SM >= 0)
-    fFlux(F, ULss, nxhat, nyhat);
-  if (SM <= 0 && SRs >= 0)
-    fFlux(F, URss, nxhat, nyhat);
-  if (SRs <= 0 && SR >= 0)
-    fFlux(F, URs, nxhat, nyhat);
-  if (SR < 0)
-    fFlux(F, UR, nxhat, nyhat);
-
-/*
   if (ForG == 0)
   {
-    fFlux(FA, UA);
-    fFlux(FB, UB);
-  }
-  else if (ForG == 1)
-  {
-    gFlux(FA, UA);
-    gFlux(FB, UB);
+    if (SL > 0)
+      fFlux(F, UL, nxhat, nyhat);
+    if (SL <= 0 && SLs >= 0)
+      fFlux(F, ULs, nxhat, nyhat);
+    if (SLs <= 0 && SM >= 0)
+      fFlux(F, ULss, nxhat, nyhat);
+    if (SM <= 0 && SRs >= 0)
+      fFlux(F, URss, nxhat, nyhat);
+    if (SRs <= 0 && SR >= 0)
+      fFlux(F, URs, nxhat, nyhat);
+    if (SR < 0)
+      fFlux(F, UR, nxhat, nyhat);
   }
   else
   {
-    cerr << "ERROR: Wrong index for direction" << endl;
-    exit(-1);
+    if (SL > 0)
+      gFlux(F, UL, nxhat, nyhat);
+    if (SL <= 0 && SLs >= 0)
+      gFlux(F, ULs, nxhat, nyhat);
+    if (SLs <= 0 && SM >= 0)
+      gFlux(F, ULss, nxhat, nyhat);
+    if (SM <= 0 && SRs >= 0)
+      gFlux(F, URss, nxhat, nyhat);
+    if (SRs <= 0 && SR >= 0)
+      gFlux(F, URs, nxhat, nyhat);
+    if (SR < 0)
+      gFlux(F, UR, nxhat, nyhat);
   }
+
+  /*
+     if (ForG == 0)
+     {
+     fFlux(FA, UA);
+     fFlux(FB, UB);
+     }
+     else if (ForG == 1)
+     {
+     gFlux(FA, UA);
+     gFlux(FB, UB);
+     }
+     else
+     {
+     cerr << "ERROR: Wrong index for direction" << endl;
+     exit(-1);
+     }
 
   //for(int eq=0; eq < NEQ; eq++)
   if (lambdaA > 0)
-    for(int eq = 0; eq < NEQ; eq++)
-      F[eq] = FA[eq];
+  for(int eq = 0; eq < NEQ; eq++)
+  F[eq] = FA[eq];
   else if (lambdaB < 0)
-    for(int eq = 0; eq < NEQ; eq++)
-      F[eq] = FB[eq];
+  for(int eq = 0; eq < NEQ; eq++)
+  F[eq] = FB[eq];
   else if (lambdaB >=0 && lambdaA <=0)
-    for(int eq = 0; eq < NEQ; eq++)
-      F[eq] = (lambdaB*FA[eq] - lambdaA*FB[eq]+lambdaA*lambdaB*(UB[eq]-UA[eq]))/(lambdaB-lambdaA);
+  for(int eq = 0; eq < NEQ; eq++)
+  F[eq] = (lambdaB*FA[eq] - lambdaA*FB[eq]+lambdaA*lambdaB*(UB[eq]-UA[eq]))/(lambdaB-lambdaA);
   else
   {
-    cerr << "ERROR: HLL Flux Calculation Lambda Unphysical" << endl;
-    exit(-1);
+  cerr << "ERROR: HLL Flux Calculation Lambda Unphysical" << endl;
+  exit(-1);
   }
   */
 }
