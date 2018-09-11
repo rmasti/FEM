@@ -81,35 +81,35 @@ struct constants
 
 
 // Function Prototypes
-void inputMesh(MatrixXd& xn, MatrixXd& yn, MatrixXd& xc, MatrixXd& yc,const string mesh);
+void inputMesh(RowMajorMatrixXd& xn, RowMajorMatrixXd& yn, RowMajorMatrixXd& xc, RowMajorMatrixXd& yc,const string mesh);
 
-void extrapCopyCoords(MatrixXd& xc_g, MatrixXd& yc_g, const MatrixXd& xc, const MatrixXd& yc, constants C);
+void extrapCopyCoords(RowMajorMatrixXd& xc_g, RowMajorMatrixXd& yc_g, const RowMajorMatrixXd& xc, const RowMajorMatrixXd& yc, constants C);
 
-void computeArea(MatrixXd& Ai, MatrixXd& Aj, const MatrixXd& xn, const MatrixXd& yn);
+void computeArea(RowMajorMatrixXd& Ai, RowMajorMatrixXd& Aj, const RowMajorMatrixXd& xn, const RowMajorMatrixXd& yn);
 
-void computeNormalVectors(MatrixXd& nix, MatrixXd& niy, MatrixXd& njx, MatrixXd& njy, const MatrixXd& xn, const MatrixXd& yn, const MatrixXd& Ai, const MatrixXd& Aj);
+void computeNormalVectors(RowMajorMatrixXd& nix, RowMajorMatrixXd& niy, RowMajorMatrixXd& njx, RowMajorMatrixXd& njy, const RowMajorMatrixXd& xn, const RowMajorMatrixXd& yn, const RowMajorMatrixXd& Ai, const RowMajorMatrixXd& Aj);
 
-void computeVolume(MatrixXd& Volume, const MatrixXd& xn, const MatrixXd& yn);
+void computeVolume(RowMajorMatrixXd& Volume, const RowMajorMatrixXd& xn, const RowMajorMatrixXd& yn);
 
 
-void outputArray( string Address,  string FileName,  MatrixXd& out,  int n);
+void outputArray( string Address,  string FileName,  RowMajorMatrixXd& out,  int n);
 
 void outputArrayMap(string Address, string FileName, const Map2Eigen* out, int n); 
 
-void initialize(Map2Eigen* V, const MatrixXd& xc_g, const MatrixXd& yc_g, constants C);
+void initialize(Map2Eigen* V, const RowMajorMatrixXd& xc_g, const RowMajorMatrixXd& yc_g, constants C);
 
-void setBC(Map2Eigen* V, const MatrixXd& nix, const MatrixXd& niy, const MatrixXd& njx, const MatrixXd& njy, MatrixXd& T, constants C);
+void setBC(Map2Eigen* V, const RowMajorMatrixXd& nix, const RowMajorMatrixXd& niy, const RowMajorMatrixXd& njx, const RowMajorMatrixXd& njy, RowMajorMatrixXd& T, constants C);
 
-void slipwallBC(Map2Eigen* V, const int Begin[], const int End[], const MatrixXd& nix, const MatrixXd& niy, const MatrixXd& njx, const MatrixXd& njy, MatrixXd& T, constants C);
+void slipwallBC(Map2Eigen* V, const int Begin[], const int End[], const RowMajorMatrixXd& nix, const RowMajorMatrixXd& niy, const RowMajorMatrixXd& njx, const RowMajorMatrixXd& njy, RowMajorMatrixXd& T, constants C);
 
 
 void primToCons(Map2Eigen* U, const Map2Eigen* V);
 void consToPrim(Map2Eigen* V, const Map2Eigen* U);
 void cons2Prim(double V[],double U[],int size);
 
-double computeTimeStep(MatrixXd& Volume, MatrixXd& Ai, MatrixXd& Aj, MatrixXd& nix,  MatrixXd& niy, MatrixXd& njx,  MatrixXd& njy, Map2Eigen* V, constants C);
+double computeTimeStep(RowMajorMatrixXd& Volume, RowMajorMatrixXd& Ai, RowMajorMatrixXd& Aj, RowMajorMatrixXd& nix,  RowMajorMatrixXd& niy, RowMajorMatrixXd& njx,  RowMajorMatrixXd& njy, Map2Eigen* V, constants C);
 
-double computeTimeStepU(MatrixXd& Volume, MatrixXd& Ai, MatrixXd& Aj, MatrixXd& nix,  MatrixXd& niy, MatrixXd& njx,  MatrixXd& njy, Map2Eigen* U, constants C);
+double computeTimeStepU(RowMajorMatrixXd& Volume, RowMajorMatrixXd& Ai, RowMajorMatrixXd& Aj, RowMajorMatrixXd& nix,  RowMajorMatrixXd& niy, RowMajorMatrixXd& njx,  RowMajorMatrixXd& njy, Map2Eigen* U, constants C);
 
 void computeFluxVL(double* FFLUX, double* ul,double* ur, double nxhat, double nyhat);
 
@@ -128,7 +128,7 @@ double SIGN(double a, double b);
 double limiter(double& r, constants C);
 
 
-void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L , Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T, MatrixXd& njx, MatrixXd& njy, MatrixXd& nix, MatrixXd& niy, constants C);
+void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L , Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T, RowMajorMatrixXd& njx, RowMajorMatrixXd& njy, RowMajorMatrixXd& nix, RowMajorMatrixXd& niy, constants C);
 
 void computeFluxHLL(double F[], double UA[], double UB[], double& nxhat, double& nyhat, int ForG);
 
@@ -136,15 +136,17 @@ void fFlux(double F[], double U[], double nxhat, double nyhat);
 
 void gFlux(double G[], double U[], double nxhat, double nyhat);
 
-void computeSourceTerm(Map2Eigen* S, Map2Eigen* U, const MatrixXd& xc, const MatrixXd& yc, constants C);
+void computeSourceTerm(Map2Eigen* S, Map2Eigen* U, const RowMajorMatrixXd& xc, const RowMajorMatrixXd& yc, constants C);
 
 
-void computeRes(Map2Eigen* Res, const Map2Eigen* S, const Map2Eigen* F, const Map2Eigen* G, const MatrixXd& Aj, const MatrixXd& Ai, const MatrixXd& Volume, constants C);
+void computeRes(Map2Eigen* Res, const Map2Eigen* S, const Map2Eigen* F, const Map2Eigen* G, const RowMajorMatrixXd& Aj, const RowMajorMatrixXd& Ai, const RowMajorMatrixXd& Volume, constants C);
 
 
-void rungeKutta(Map2Eigen* U_RK, Map2Eigen* U, Map2Eigen* Res, MatrixXd& Volume, int k, double dt, constants C);
+void rungeKutta(Map2Eigen* U_RK, Map2Eigen* U, Map2Eigen* Res, RowMajorMatrixXd& Volume, int k, double dt, constants C);
 
 
-void setBConU(Map2Eigen* U, const MatrixXd& nix, const MatrixXd& niy, const MatrixXd& njx, const MatrixXd njy, constants C);
+void setBConU(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd& niy, const RowMajorMatrixXd& njx, const RowMajorMatrixXd njy, constants C);
 
+
+void meshBlock(const string mesh, const string outputFolder, constants C);
 #endif

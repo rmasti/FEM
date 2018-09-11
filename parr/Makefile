@@ -30,9 +30,11 @@ LIBS = -lm
 # list of objects to be compiled
 
 OBJS = \
-       src/mhdRT_m.o\
+       src/mpiMain.o\
        src/map2Eigen.o\
+       src/meshBlock.o\
        src/mhdRT_f.o
+       #src/mhdRT_m.o\
 
 TESTS = \
 	test/unitTest.o

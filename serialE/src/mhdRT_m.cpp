@@ -23,7 +23,7 @@ int main (int argc, char * argv[])
 
   //string outputFolder =  "./output/";
   string outputFolder =  "/mnt/c/Users/rlm78/Desktop/matlabstuff/";
-  string mesh = "mesh/debugMatlab.msh";
+  string mesh = "../mesh/debugMatlab.msh";
 
   ///////////////// READ IN THE MESH ///////////////////
   MatrixXd xn, yn; // coord for the nodal points of cell
