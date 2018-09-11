@@ -12,5 +12,8 @@
 *.vrb
 *.nav
 *.swo
+*.o
 main
+maptest
+mpitest
 eigen/*
