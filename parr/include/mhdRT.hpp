@@ -38,6 +38,8 @@ using namespace Eigen;
 #define NEQ 8
 #define ACCEL 1.0
 #define DEBUG false
+#define TRUE 1
+#define FALSE 1
 
 // DEFINE ELEMENT IDENTIFIERS
 

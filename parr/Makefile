@@ -8,6 +8,7 @@ LIBDIR	= ./lib  ../eigen
 # specify which compilers to use for c, fortran and linking
 #CC	= g++
 #LD	= g++
+
 CC = mpic++
 LD = mpic++
 
@@ -42,12 +43,16 @@ TESTS = \
 
 MAPTESTS = \
 	src/map2Eigen.o\
-	src/map2EigenTest.o
+	test/map2EigenTest.o
 	#src/fp_f.o\
 
 MPITEST = \
-	src/mpiExampleEigen.o\
+	test/mpiExampleEigen.o\
 	src/map2Eigen.o
+	#src/fp_f.o\
+
+MPICARTTEST = \
+	test/mpiCartTest.o
 	#src/fp_f.o\
 
 
@@ -67,6 +72,10 @@ maptest:$(MAPTESTS)
 mpitest:$(MPITEST)
 	$(LD)  $(LDFLAGS) -o main $(MPITEST) $(LIBS)
 	rm -r $(MPITEST)
+
+mpicarttest:$(MPICARTTEST)
+	$(LD)  $(LDFLAGS) -o main $(MPICARTTEST) $(LIBS)
+	rm -r $(MPICARTTEST)
 
 
 # what to do if user types "make clean"
