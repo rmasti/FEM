@@ -39,7 +39,7 @@ using namespace Eigen;
 #define ACCEL 1.0
 #define DEBUG false
 #define TRUE 1
-#define FALSE 1
+#define FALSE 0
 
 // DEFINE ELEMENT IDENTIFIERS
 
