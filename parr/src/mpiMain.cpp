@@ -21,9 +21,29 @@ int main(int argc, char *argv[]){
   string mesh = "../mesh/debugMatlab.msh";
   string outputFolder = "./output/";
 
-  meshBlock(mesh, outputFolder, C);
+
+  RowMajorMatrixXd xcL_g, ycL_g;
+  RowMajorMatrixXd nixL, niyL;
+  RowMajorMatrixXd njxL, njyL;
+  RowMajorMatrixXd AjL, AiL;
+  RowMajorMatrixXd VolumeL;
+
+  //meshBlock(mesh, outputFolder, C);
+  // grab the information needed to run initialize and the fvm locally
+  MPI_Comm com2d;
+  com2d = meshBlock(mesh, outputFolder, xcL_g, ycL_g, nixL, niyL, njxL, njyL, AiL, AjL, VolumeL, C);
+
+  int coord[2];
+  int u, l, d, r;
+  MPI_Cart_coords(com2d, rank, 2, coord);
+  MPI_Cart_shift(com2d, 0, 1, &u, &d);
+  MPI_Cart_shift(com2d, 1, 1, &l, &r);
+      
+  printf("My rank is %d: My coordinates are %d, %d\nMy neighbors are left:%d right:%d up:%d down:%d\n", rank, coord[0], coord[1], l, r, u ,d);
 
 
+
+  //cout << AjL << endl;
 
   MPI_Finalize();
   return 0;
