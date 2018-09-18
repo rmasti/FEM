@@ -64,17 +64,16 @@ int main(int argc, char *argv[]){
   outputArrayMap(outputFolder, "V", V, rank);
   outputArray(outputFolder, "xcL_g", xcL_g, rank+size);
 
- 
+  setBcSend(U, nixL, niyL, njxL, njyL, com2d,  C);
 
-/* coord example
+/* 
   int coord[2];
   int u, l, d, r;
   MPI_Cart_coords(com2d, rank, 2, coord);
-  MPI_Cart_shift(com2d, 0, 1, &u, &d);
+  MPI_Cart_shift(com2d, 0, 1, &d, &u);
   MPI_Cart_shift(com2d, 1, 1, &l, &r);
       
-//  printf("My rank is %d: My coordinates are %d, %d\nMy neighbors are left:%d right:%d up:%d down:%d\n", rank, coord[0], coord[1], l, r, u ,d);
-
+  printf("My rank is %d: My coordinates are %d, %d\nMy neighbors are left:%d right:%d up:%d down:%d\n", rank, coord[0], coord[1], l, r, u ,d);
 
   if(rank == 2)
   {
@@ -84,7 +83,7 @@ int main(int argc, char *argv[]){
     cout << ycL_g << endl;
   }
 
-    */
+  */
 
   MPI_Finalize();
   return 0;

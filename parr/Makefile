@@ -34,6 +34,7 @@ OBJS = \
        src/mpiMain.o\
        src/map2Eigen.o\
        src/meshBlock.o\
+       src/mpiSetBC.o\
        src/mhdRT_f.o
        #src/mhdRT_m.o\
 

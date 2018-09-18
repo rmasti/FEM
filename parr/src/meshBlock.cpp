@@ -23,7 +23,7 @@ MPI_Comm meshBlock(const string mesh, const string outputFolder, RowMajorMatrixX
   ni = pow(2, (n/2) + n%2);
 
   int dim[2] = {nj, ni};
-  int reorder = FALSE;
+  int reorder = TRUE;//FALSE;
   int period[2];
   period[1] = TRUE;
   period[0] = FALSE;

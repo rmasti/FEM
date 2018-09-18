@@ -7,6 +7,15 @@
 
 # include "mhdRT.hpp"
 
+void computeCoord(int& l, int& r, int& d, int& u, MPI_Comm& com2d)
+{
+  int rank;
+  MPI_Comm_rank(com2d, &rank);
+  int coord[2];
+  MPI_Cart_coords(com2d, rank, 2, coord);
+  MPI_Cart_shift(com2d, 0, 1, &d, &u);
+  MPI_Cart_shift(com2d, 1, 1, &l, &r);
+}
 
 double computeTimeStepU(
     RowMajorMatrixXd& Volume,      // input - volume of every cell
