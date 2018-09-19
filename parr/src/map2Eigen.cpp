@@ -35,6 +35,8 @@ void stitchMap2EigenWrite(string Address, string FileName, Map2Eigen* IN, const 
   MPI_Comm_rank(com2d, &rank);
   MPI_Comm_size(com2d, &size);
   MPI_Status status;
+  MPI_Request requestOut;
+  MPI_Request requestIn;
 
   //printf("max j = %d; max i = %d\n", coord[0], coord[1]);
 
@@ -49,7 +51,8 @@ void stitchMap2EigenWrite(string Address, string FileName, Map2Eigen* IN, const 
   {
     for(int eq = 0; eq < NEQ; eq++)
       temp->Q[eq] = IN->Q[eq].block(C.num_ghost, C.num_ghost, njc, nic);
-    MPI_Send(temp->Q_raw, njc*nic*NEQ, MPI_DOUBLE, 0, rank*111, com2d);
+    MPI_Isend(temp->Q_raw, njc*nic*NEQ, MPI_DOUBLE, 0, rank*111, com2d, &requestOut);
+    MPI_Wait(&requestOut,&status);
   }
 
   MPI_Barrier(com2d);
@@ -68,7 +71,8 @@ void stitchMap2EigenWrite(string Address, string FileName, Map2Eigen* IN, const 
           int npp = NEQ*nic*njc;//number per partitition
           r = (j*nip)+i;
 
-          MPI_Recv(temp->Q_raw, npp, MPI_DOUBLE, r, 111*r, com2d, &status); 
+          MPI_Irecv(temp->Q_raw, npp, MPI_DOUBLE, r, 111*r, com2d, &requestIn); 
+          MPI_Wait(&requestIn,&status);
           for(int eq = 0; eq < NEQ; eq++)
             out->Q[eq].block(njc*j,nic*i, njc, nic) = temp->Q[eq];
         }      

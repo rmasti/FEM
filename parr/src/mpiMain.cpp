@@ -32,8 +32,11 @@ int main(int argc, char *argv[]){
 
   //meshBlock(mesh, outputFolder, C);
   // grab the information needed to run initialize and the fvm locally
+  if(rank == 0)
+    cout << " Grabbing Geometry " << endl;
   MPI_Comm com2d;
   com2d = meshBlock(mesh, outputFolder, xcL_g, ycL_g, nixL, niyL, njxL, njyL, AiL, AjL, VolumeL, C);
+
   int coordMax[2];
   MPI_Cart_coords(com2d, rank, 2, coordMax);
   MPI_Allreduce(&coordMax[0], &coordMax[0], 1, MPI_INT, MPI_MAX, com2d);
@@ -67,12 +70,20 @@ int main(int argc, char *argv[]){
   RowMajorMatrixXd xcL = xcL_g.block(C.num_ghost, C.num_ghost, njc, nic);
   RowMajorMatrixXd ycL = ycL_g.block(C.num_ghost, C.num_ghost, njc, nic);
   // initialize prim var
+
+  if(rank == 0)
+    cout << " Initializing " << endl;
+ 
   initialize(V, xcL_g, ycL_g, C);
   primToCons(U,V);
 
   U_RK = U;
 
+  if(rank == 0)
+    cout << " Sending BC " << endl;
   setBcSend(U, nixL, niyL, njxL, njyL, com2d,  C);
+  if(rank == 0)
+    cout << " Receiving BC " << endl;
   setBcRecv(U, com2d, C);
 
   outputArrayMap(outputFolder, "UL", U, rank);
@@ -85,7 +96,13 @@ int main(int argc, char *argv[]){
   int n=0;
 
 
+  stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
 
+  if(rank == 0)
+    cout << " Entering Time Loop " << endl;
+
+  
+  /*
   while(time(0, n) < tend)
   {
     for (int k = 0; k < RKORDER; k++)
@@ -133,6 +150,7 @@ int main(int argc, char *argv[]){
   }
 
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
+  */
   MPI_Finalize();
   return 0;
 }
