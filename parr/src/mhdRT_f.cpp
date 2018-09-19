@@ -179,14 +179,6 @@ void setBConU(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
       U->Q[pid](jgb,i) = 2.0*U->Q[pid](jgb+1,i) - U->Q[pid](jgb+2,i);
       U->Q[bzid](jgb,i) = 2.0*U->Q[bzid](jgb+1,i) - U->Q[bzid](jgb+2,i);
 
-      /*
-         U->Q[rhoid](jgb,i) = U->Q[rhoid](jgb+1,i);// - U->Q[rhoid](jgb+2,i);
-         U->Q[wid](jgb,i) = U->Q[wid](jgb+1,i);// - U->Q[wid](jgb+2,i);
-         U->Q[pid](jgb,i) = U->Q[pid](jgb+1,i);// - U->Q[pid](jgb+2,i);
-         U->Q[bzid](jgb,i) = U->Q[bzid](jgb+1,i);// - U->Q[bzid](jgb+2,i);
-
-*/
-
       // horizontal boundary upper
       nx = njx(jft,iff); 
       ny = njy(jft,iff);
@@ -206,14 +198,6 @@ void setBConU(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
       U->Q[wid](jgt,i) = 2.0*U->Q[wid](jgt-1,i) - U->Q[wid](jgt-2,i);
       U->Q[pid](jgt,i) = 2.0*U->Q[pid](jgt-1,i) - U->Q[pid](jgt-2,i);
       U->Q[bzid](jgt,i) = 2.0*U->Q[bzid](jgt-1,i) - U->Q[bzid](jgt-2,i);
-
-      /*
-         U->Q[rhoid](jgt,i) = U->Q[rhoid](jgt-1,i);// - U->Q[rhoid](jgt-2,i);
-         U->Q[wid](jgt,i) = U->Q[wid](jgt-1,i);// - U->Q[wid](jgt-2,i);
-         U->Q[pid](jgt,i) = U->Q[pid](jgt-1,i);// - U->Q[pid](jgt-2,i);
-         U->Q[bzid](jgt,i) =U->Q[bzid](jgt-1,i);// - U->Q[bzid](jgt-2,i);
-
-*/
 
     }
   }
@@ -1263,6 +1247,7 @@ void outputArrayMap(
     )
 {
   string outString = FileName + "_rho";
+  //RowMajorMatrixXd outSingle = out->Q[rhoid];
   RowMajorMatrixXd outSingle = out->Q[rhoid];
 
   outputArray(Address, outString, outSingle, n);
@@ -1299,7 +1284,7 @@ void outputArray(
   // where lines end and start
   //IOFormat CleanFmt(14,0,", ", "\n", "[", "]");
   IOFormat CleanFmt(14);
-  outfile << out.format(CleanFmt) << endl; // output trans
+  outfile << out.colwise().reverse().format(CleanFmt) << endl; // output trans
   //outfile << setprecision(14) << out << endl; // output trans
 }
 

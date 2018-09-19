@@ -97,7 +97,6 @@ MPI_Comm meshBlock(const string mesh, const string outputFolder, RowMajorMatrixX
 
     // Now we can send the information that the different blocks need to 
 
-    cout << " Prep to send " << endl;
     int nx = xc.cols();
     int ny = xc.rows();
 
@@ -282,6 +281,7 @@ MPI_Comm meshBlock(const string mesh, const string outputFolder, RowMajorMatrixX
   outputArray(outputFolder, "AjL", AjL, rank);
  
 
+  MPI_Barrier(com2d);
   return com2d;
 
   //printf("\nmy rank = %d, and I have nxc = %d, and nyb = %d\n", rank, nb[0], nb[1]);
