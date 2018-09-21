@@ -20,10 +20,12 @@ void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd
   //////////////////////////// SEND LEFT AND RIGHT DATA  //////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////
   Map2Eigen *tempLR  = new Map2Eigen(njc , C.num_ghost, NEQ);
-  if(rank < r && (l > r || l == r))// physical boundary on the left ergo I need to send my cells to the right
+  if(l > rank || r < rank)// physical boundary on the left ergo I need to send my cells to the right
   {
 
+
     int icl = C.num_ghost;
+
     for(int i = 0; i < C.num_ghost; i++)
     {
       // no flip sig
@@ -87,7 +89,7 @@ void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd
     }
     // take my data and send it to the processor to the right of my which is periodic phys boundary
     MPI_Isend(tempLR->Q_raw, njc*C.num_ghost, MPI_DOUBLE, r, 111, com2d, &request);// tag 111 is left
-    MPI_Wait(&request, &status);
+    //MPI_Wait(&request, &status);
     //MPI_Send(tempLR->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, r, 111, com2d);
     //printf("My right on phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
   }
@@ -108,7 +110,7 @@ void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd
     }
     // take my data and send it to the processor to the right which is not phys boundary
     MPI_Isend(tempLR->Q_raw, njc*C.num_ghost, MPI_DOUBLE, r, 111, com2d, &request);// tag 111 is left
-    MPI_Wait(&request, &status);
+    //MPI_Wait(&request, &status);
     //MPI_Send(tempLR->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, r, 111, com2d);
     //printf("My right not on phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
   }
@@ -177,7 +179,7 @@ void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd
     // take my data and send it to the processor below me which is not phys boundary
     //MPI_Send(tempBT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, d, 444, com2d); // tag 444 is top
     MPI_Isend(tempBT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, d, 444, com2d, &request); // tag 444 is top
-    MPI_Wait(&request, &status);
+    //MPI_Wait(&request, &status);
     //printf("My bottom no phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
   }
 
@@ -239,7 +241,7 @@ void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd
     // take my data and send it to the processor above me which is not phys boundary
     //MPI_Send(tempBT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, u, 333, com2d); // tag 333 is bottom
     MPI_Isend(tempBT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, u, 333, com2d, &request); // tag 333 is bottom
-    MPI_Wait(&request, &status);
+    //MPI_Wait(&request, &status);
     //printf("My bottom no phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
 
     //printf("My top no phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
@@ -272,9 +274,9 @@ void setBcRecv(Map2Eigen* U, MPI_Comm& com2d,  constants C)
   //MPI_Recv(tempL->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, l, 111, com2d, &status);
   //MPI_Recv(tempR->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, r, 222, com2d, &status);
   MPI_Irecv(tempL->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, l, 111, com2d, &request);
-  MPI_Wait(&request, &status);
+  //MPI_Wait(&request, &status);
   MPI_Irecv(tempR->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, r, 222, com2d, &request);
-  MPI_Wait(&request, &status);
+  //MPI_Wait(&request, &status);
   // Fill in data for the left
   for(int eq = 0; eq < NEQ; eq++)
   {
@@ -301,7 +303,7 @@ void setBcRecv(Map2Eigen* U, MPI_Comm& com2d,  constants C)
     MPI_Irecv(tempB->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, d, 333, com2d, &request);
 
   
-    MPI_Wait(&request, &status);
+    //MPI_Wait(&request, &status);
     int jg = C.num_ghost-1;
     for(int eq = 0; eq < NEQ; eq++)
       for(int j = 0; j < C.num_ghost; j++)
@@ -314,7 +316,7 @@ void setBcRecv(Map2Eigen* U, MPI_Comm& com2d,  constants C)
     //MPI_Recv(tempT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, u, 444, com2d, &status);
     MPI_Irecv(tempT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, u, 444, com2d, &request);
 
-    MPI_Wait(&request, &status);
+    //MPI_Wait(&request, &status);
     int jg = (njc-C.num_ghost);
     for(int eq = 0; eq < NEQ; eq++)
       for(int j = 0; j < C.num_ghost; j++)
@@ -323,5 +325,5 @@ void setBcRecv(Map2Eigen* U, MPI_Comm& com2d,  constants C)
   delete[] tempB->Q_raw; tempB->Q_raw=NULL;
   delete[] tempT->Q_raw; tempT->Q_raw=NULL;
 
-  MPI_Barrier(com2d);
+  //MPI_Barrier(com2d);
 }

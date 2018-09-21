@@ -82,11 +82,11 @@ int main(int argc, char *argv[]){
   if(rank == 0)
     cout << " Sending BC " << endl;
   setBcSend(U, nixL, niyL, njxL, njyL, com2d,  C);
-  MPI_Barrier(com2d);
+  //MPI_Barrier(com2d);
   if(rank == 0)
     cout << " Receiving BC " << endl;
   setBcRecv(U, com2d, C);
-  MPI_Barrier(com2d);
+  //MPI_Barrier(com2d);
 
   outputArrayMap(outputFolder, "UL", U, rank);
   outputArrayMap(outputFolder, "VL", V, rank);
