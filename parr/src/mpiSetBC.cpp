@@ -20,232 +20,155 @@ void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd
   //////////////////////////// SEND LEFT AND RIGHT DATA  //////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////
   Map2Eigen *tempLR  = new Map2Eigen(njc , C.num_ghost, NEQ);
-  if(l > rank || r < rank)// physical boundary on the left ergo I need to send my cells to the right
+
+  int ic, sign, out, tag; // create items to be passed to if statements
+  int sendSize = njc*C.num_ghost*NEQ;
+  /////////////////// do left////////////////
+  ic = C.num_ghost;
+  sign = +1;
+  out = l;
+  tag = 222; // right recv
+  // fill lr
+  for(int i = 0; i < C.num_ghost; i++)
+    for(int eq = 0; eq < NEQ; eq++)
+      tempLR->Q[eq].col(i) = U->Q[eq].col(ic+sign*i);
+
+  if(l>rank) // phys bndry else not
   {
-
-
-    int icl = C.num_ghost;
-
-    for(int i = 0; i < C.num_ghost; i++)
-    {
-      // no flip sig
-      tempLR->Q[rhoid].col(i) = U->Q[rhoid].col(icl+i);
-      tempLR->Q[wid].col(i) = U->Q[wid].col(icl+i);
-      tempLR->Q[bzid].col(i) = U->Q[bzid].col(icl+i);
-      tempLR->Q[pid].col(i) = U->Q[pid].col(icl+i);
-
-      // flip sign
-      tempLR->Q[uid].col(i) = -1.0*U->Q[uid].col(icl+i);
-      tempLR->Q[vid].col(i) = -1.0*U->Q[vid].col(icl+i);
-      tempLR->Q[bxid].col(i) = -1.0*U->Q[bxid].col(icl+i);
-      tempLR->Q[byid].col(i) = -1.0*U->Q[byid].col(icl+i);
-    }
-    // take my data and send it to the processor on the left which is periodic phys boundary
-    MPI_Isend(tempLR->Q_raw, njc*C.num_ghost, MPI_DOUBLE, l, 222, com2d, &request); 
-    MPI_Wait(&request, &status);
-    //MPI_Send(tempLR->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, l, 222, com2d);
-    //printf("My left on phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
+    // flip sign
+    tempLR->Q[uid]  =-1.0*tempLR->Q[uid];
+    tempLR->Q[vid]  =-1.0*tempLR->Q[vid];
+    tempLR->Q[bxid] =-1.0*tempLR->Q[bxid];
+    tempLR->Q[byid] =-1.0*tempLR->Q[byid];
   }
-  else // not physical boundary send my stuff on left of my interior to the rank to the left
+  MPI_Isend(tempLR->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &request);//tag222 is right
+  ////////////////////////////////////////
+
+  ////////////// do right ////////////////
+  ic =(nic-C.num_ghost)-1; // first cell layer on right 
+  sign = -1;
+  out = r;
+  tag = 111; // left recv
+  // fill lr
+  for(int i = 0; i < C.num_ghost; i++)
+    for(int eq = 0; eq < NEQ; eq++)
+      tempLR->Q[eq].col(i) = U->Q[eq].col(ic+sign*i);
+
+  if(r < rank)// physical boundary on right  need flip
   {
-    int icl = C.num_ghost;
-    for(int i = 0; i < C.num_ghost; i++)
-    {
-      // no flip sign just grab my cell
-      tempLR->Q[rhoid].col(i) = U->Q[rhoid].col(icl+i);
-      tempLR->Q[wid].col(i) = U->Q[wid].col(icl+i);
-      tempLR->Q[bzid].col(i) = U->Q[bzid].col(icl+i);
-      tempLR->Q[pid].col(i) = U->Q[pid].col(icl+i);
-      tempLR->Q[uid].col(i) = U->Q[uid].col(icl+i);
-      tempLR->Q[vid].col(i) = U->Q[vid].col(icl+i);
-      tempLR->Q[bxid].col(i) = U->Q[bxid].col(icl+i);
-      tempLR->Q[byid].col(i) = U->Q[byid].col(icl+i);
-    }
-    // take my data and send it to the processor on the left which is not phys boundary
-    MPI_Isend(tempLR->Q_raw, njc*C.num_ghost, MPI_DOUBLE, l, 222, com2d, &request); // tag 222 is right
-    MPI_Wait(&request, &status);
-   // MPI_Send(tempLR->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, l, 222, com2d);
-    //printf("My left not on phys my rank is %d: My neighbors are leftInt:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
+    tempLR->Q[uid]  =-1.0*tempLR->Q[uid];
+    tempLR->Q[vid]  =-1.0*tempLR->Q[vid];
+    tempLR->Q[bxid] =-1.0*tempLR->Q[bxid];
+    tempLR->Q[byid] =-1.0*tempLR->Q[byid];
   }
-
-  // right physical boundary
-  if(rank > r && (r < l || l == r))
-  {
-
-    int icr = (nic-C.num_ghost)-1; // first cell layer on right 
-    for(int i = 0; i < C.num_ghost; i++)
-    {
-      // no flip sig
-      tempLR->Q[rhoid].col(i) = U->Q[rhoid].col(icr-i);
-      tempLR->Q[wid].col(i) = U->Q[wid].col(icr-i);
-      tempLR->Q[bzid].col(i) = U->Q[bzid].col(icr-i);
-      tempLR->Q[pid].col(i) = U->Q[pid].col(icr-i);
-
-      // flip sign
-      tempLR->Q[uid].col(i) = -1.0*U->Q[uid].col(icr-i);
-      tempLR->Q[vid].col(i) = -1.0*U->Q[vid].col(icr-i);
-      tempLR->Q[bxid].col(i) = -1.0*U->Q[bxid].col(icr-i);
-      tempLR->Q[byid].col(i) = -1.0*U->Q[byid].col(icr-i);
-    }
-    // take my data and send it to the processor to the right of my which is periodic phys boundary
-    MPI_Isend(tempLR->Q_raw, njc*C.num_ghost, MPI_DOUBLE, r, 111, com2d, &request);// tag 111 is left
-    //MPI_Wait(&request, &status);
-    //MPI_Send(tempLR->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, r, 111, com2d);
-    //printf("My right on phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
-  }
-  else
-  {
-    int icr = (nic-C.num_ghost)-1; // first cell layer on right 
-    for(int i = 0; i < C.num_ghost; i++)
-    {
-      // no flip sig
-      tempLR->Q[rhoid].col(i) = U->Q[rhoid].col(icr-i);
-      tempLR->Q[wid].col(i) = U->Q[wid].col(icr-i);
-      tempLR->Q[bzid].col(i) = U->Q[bzid].col(icr-i);
-      tempLR->Q[pid].col(i) = U->Q[pid].col(icr-i);
-      tempLR->Q[uid].col(i) =  U->Q[uid].col(icr-i);
-      tempLR->Q[vid].col(i) =  U->Q[vid].col(icr-i);
-      tempLR->Q[bxid].col(i) = U->Q[bxid].col(icr-i);
-      tempLR->Q[byid].col(i) = U->Q[byid].col(icr-i);
-    }
-    // take my data and send it to the processor to the right which is not phys boundary
-    MPI_Isend(tempLR->Q_raw, njc*C.num_ghost, MPI_DOUBLE, r, 111, com2d, &request);// tag 111 is left
-    //MPI_Wait(&request, &status);
-    //MPI_Send(tempLR->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, r, 111, com2d);
-    //printf("My right not on phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
-  }
-
-  //tempLR->Qraw -> Nu
+  MPI_Isend(tempLR->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &request); //tag222 is right
+  /////////////////////////////////////
   delete[] tempLR->Q_raw; tempLR->Q_raw = NULL;
 
   /////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////// SEND BOTT AND TOP  DATA  //////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////
   Map2Eigen *tempBT  = new Map2Eigen(C.num_ghost, nic, NEQ);
+  sendSize = nic*C.num_ghost*NEQ;
 
-  if(d < 0)// physical boundary on bottom 
+  /////////////////// do bottom ///////////////////////
+  int jfo, jgo, jco;
+  jfo = 0;// bottom face
+  jco = C.num_ghost; // bott inter offset
+  jgo = C.num_ghost- 1;
+  sign = +1;
+  out = d;
+  tag = 444;
+
+  int iff;
+  int jc;
+  int jg;
+  double uvel, vvel, bx, by, nx,ny;
+
+  if(d < 0) // phys bndry
   {
-    int jfb = 0;
-    int jgb;
-    int iff;
-
-    int jcb;
-    double uvel, vvel, bx, by, nx,ny;
-
     for(int j = 0; j < C.num_ghost; j++)
       for(int i = C.num_ghost; i < nic-C.num_ghost; i++)
       {
-
         iff = i - C.num_ghost;// index for normvecs
-        jcb = C.num_ghost+j; // cell interior
-        jgb = (C.num_ghost-1) - j; // ghost cell row-layer
+        jc = jco + sign*j; // cell interior
+        jg = jgo - sign*j; // ghost cell row-layer
 
         // bottom boundary no penetration conducting wall
-        nx = njx(jfb,iff);
-        ny = njy(jfb,iff);
-        uvel = U->Q[uid](jcb+j,i);
-        vvel = U->Q[vid](jcb+j,i);
-        bx = U->Q[bxid](jcb+j,i);
-        by = U->Q[byid](jcb+j,i);
+        nx = njx(jfo,iff);
+        ny = njy(jfo,iff);
+        uvel = U->Q[uid](jc+sign*j,i);
+        vvel = U->Q[vid](jc+sign*j,i);
+        bx =  U->Q[bxid](jc+sign*j,i);
+        by =  U->Q[byid](jc+sign*j,i);
 
-        U->Q[uid](jgb,i) = -nx*(uvel*nx+vvel*ny) - ny*(-uvel*ny + vvel*nx);
-        U->Q[vid](jgb,i) = -ny*(uvel*nx+vvel*ny) + nx*(-uvel*ny + vvel*nx);
-        U->Q[bxid](jgb,i) = -nx*(bx*nx+by*ny) - ny*(-bx*ny + by*nx);
-        U->Q[byid](jgb,i) = -ny*(bx*nx+by*ny) + nx*(-bx*ny + by*nx);
+        U->Q[uid](jg,i) = -nx*(uvel*nx+vvel*ny) - ny*(-uvel*ny + vvel*nx);
+        U->Q[vid](jg,i) = -ny*(uvel*nx+vvel*ny) + nx*(-uvel*ny + vvel*nx);
+        U->Q[bxid](jg,i) = -nx*(bx*nx+by*ny) - ny*(-bx*ny + by*nx);
+        U->Q[byid](jg,i) = -ny*(bx*nx+by*ny) + nx*(-bx*ny + by*nx);
         // extrapolate
-        U->Q[rhoid](jgb,i) = 2.0*U->Q[rhoid](jgb+1,i) - U->Q[rhoid](jgb+2,i);
-        U->Q[wid](jgb,i) = 2.0*U->Q[wid](jgb+1,i) - U->Q[wid](jgb+2,i);
-        U->Q[pid](jgb,i) = 2.0*U->Q[pid](jgb+1,i) - U->Q[pid](jgb+2,i);
-        U->Q[bzid](jgb,i) = 2.0*U->Q[bzid](jgb+1,i) - U->Q[bzid](jgb+2,i);
+        U->Q[rhoid](jg,i) = 2.0*U->Q[rhoid](jg+sign*1,i) - U->Q[rhoid](jg+sign*2,i);
+        U->Q[wid](jg,i) =   2.0*U->Q[wid](jg+sign*1,i) - U->Q[wid](jg+sign*2,i);
+        U->Q[pid](jg,i) =   2.0*U->Q[pid](jg+sign*1,i) - U->Q[pid](jg+sign*2,i);
+        U->Q[bzid](jg,i) =  2.0*U->Q[bzid](jg+sign*1,i) - U->Q[bzid](jg+sign*2,i);
       }
-    // Is no need to send data because bottom is physical boundary
-    //printf("My bottom on phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
   }
-  else // not physical boundary send my stuff on bottom to the rank below me
+  else // not phys bndry
   {
-    int jcb = C.num_ghost; // first cell layer on bottom
     for(int j = 0; j < C.num_ghost; j++)
-    {
-      // no flip sig
-      tempBT->Q[rhoid].row(j) = U->Q[rhoid].row(jcb+j);
-      tempBT->Q[wid].row(j) = U->Q[wid].row(jcb+j);
-      tempBT->Q[bzid].row(j) = U->Q[bzid].row(jcb+j);
-      tempBT->Q[pid].row(j) = U->Q[pid].row(jcb+j);
-      tempBT->Q[uid].row(j) =  U->Q[uid].row(jcb+j);
-      tempBT->Q[vid].row(j) =  U->Q[vid].row(jcb+j);
-      tempBT->Q[bxid].row(j) = U->Q[bxid].row(jcb+j);
-      tempBT->Q[byid].row(j) = U->Q[byid].row(jcb+j);
-    }
-    // take my data and send it to the processor below me which is not phys boundary
-    //MPI_Send(tempBT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, d, 444, com2d); // tag 444 is top
-    MPI_Isend(tempBT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, d, 444, com2d, &request); // tag 444 is top
-    //MPI_Wait(&request, &status);
-    //printf("My bottom no phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
+      for(int eq = 0; eq < NEQ; eq++)
+        tempBT->Q[eq].row(j) = U->Q[eq].row(jco+sign*j);
+
+    MPI_Isend(tempBT->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &request); //tag444top
   }
 
-  if(u < 0) // physical boundary on top no need send data
+
+  ////////////////// do upper //////////////////////
+  jfo = njx.rows()-1;// top face
+  jco = njc - C.num_ghost - 1; // top inter offset
+  jgo = (njc-C.num_ghost);
+  sign = -1;
+  out = u;
+  tag = 333;
+
+  if (u < 0) // phys bndry on top
   {
-    int jft = njx.rows()-1; // top face
-    int jgt;
-    int iff;
-
-    int jct;
-    double uvel, vvel, bx, by, nx,ny;
-
     for(int j = 0; j < C.num_ghost; j++)
       for(int i = C.num_ghost; i < nic-C.num_ghost; i++)
       {
-        iff = i-C.num_ghost;
-        jct = njc - C.num_ghost - 1 - j;
-        jgt = (njc-C.num_ghost)+j;
+        iff = i - C.num_ghost;// index for normvecs
+        jc = jco + sign*j; // cell interior
+        jg = jgo - sign*j; // ghost cell row-layer
 
-        // horizontal boundary upper
-        nx = njx(jft,iff);
-        ny = njy(jft,iff);
-        uvel = U->Q[uid](jct-j,i);
-        vvel = U->Q[vid](jct-j,i);
-        bx = U->Q[bxid](jct-j,i);
-        by = U->Q[byid](jct-j,i);
+        // bottom boundary no penetration conducting wall
+        nx = njx(jfo,iff);
+        ny = njy(jfo,iff);
+        uvel = U->Q[uid](jc+sign*j,i);
+        vvel = U->Q[vid](jc+sign*j,i);
+        bx =  U->Q[bxid](jc+sign*j,i);
+        by =  U->Q[byid](jc+sign*j,i);
 
-        //no penetrate
-        U->Q[uid](jgt,i) = -nx*(uvel*nx+vvel*ny) - ny*(-uvel*ny + vvel*nx);
-        U->Q[vid](jgt,i) = -ny*(uvel*nx+vvel*ny) + nx*(-uvel*ny + vvel*nx);
-        U->Q[bxid](jgt,i) = -nx*(bx*nx+by*ny) - ny*(-bx*ny + by*nx);
-        U->Q[byid](jgt,i) = -ny*(bx*nx+by*ny) + nx*(-bx*ny + by*nx);
-
+        U->Q[uid](jg,i) = -nx*(uvel*nx+vvel*ny) - ny*(-uvel*ny + vvel*nx);
+        U->Q[vid](jg,i) = -ny*(uvel*nx+vvel*ny) + nx*(-uvel*ny + vvel*nx);
+        U->Q[bxid](jg,i) = -nx*(bx*nx+by*ny) - ny*(-bx*ny + by*nx);
+        U->Q[byid](jg,i) = -ny*(bx*nx+by*ny) + nx*(-bx*ny + by*nx);
         // extrapolate
-        U->Q[rhoid](jgt,i) = 2.0*U->Q[rhoid](jgt-1,i) - U->Q[rhoid](jgt-2,i);
-        U->Q[wid](jgt,i) = 2.0*U->Q[wid](jgt-1,i) - U->Q[wid](jgt-2,i);
-        U->Q[pid](jgt,i) = 2.0*U->Q[pid](jgt-1,i) - U->Q[pid](jgt-2,i);
-        U->Q[bzid](jgt,i) = 2.0*U->Q[bzid](jgt-1,i) - U->Q[bzid](jgt-2,i);
-
+        U->Q[rhoid](jg,i) = 2.0*U->Q[rhoid](jg+sign*1,i) - U->Q[rhoid](jg+sign*2,i);
+        U->Q[wid](jg,i) =   2.0*U->Q[wid](jg+sign*1,i) - U->Q[wid](jg+sign*2,i);
+        U->Q[pid](jg,i) =   2.0*U->Q[pid](jg+sign*1,i) - U->Q[pid](jg+sign*2,i);
+        U->Q[bzid](jg,i) =  2.0*U->Q[bzid](jg+sign*1,i) - U->Q[bzid](jg+sign*2,i);
       }
-    // I no need send data directly modify u with phys bc
-    //printf("My top on phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
   }
-  else
+  else // not phys bndry on top
   {
-    int jct = (njc-C.num_ghost)-1; // first cell layer on top
     for(int j = 0; j < C.num_ghost; j++)
-    {
-      // no flip sig
-      tempBT->Q[rhoid].row(j) = U->Q[rhoid].row(jct-j);
-      tempBT->Q[wid].row(j) = U->Q[wid].row(jct-j);
-      tempBT->Q[bzid].row(j) = U->Q[bzid].row(jct-j);
-      tempBT->Q[pid].row(j) = U->Q[pid].row(jct-j);
-      tempBT->Q[uid].row(j) =  U->Q[uid].row(jct-j);
-      tempBT->Q[vid].row(j) =  U->Q[vid].row(jct-j);
-      tempBT->Q[bxid].row(j) = U->Q[bxid].row(jct-j);
-      tempBT->Q[byid].row(j) = U->Q[byid].row(jct-j);
-    }
-    // take my data and send it to the processor above me which is not phys boundary
-    //MPI_Send(tempBT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, u, 333, com2d); // tag 333 is bottom
-    MPI_Isend(tempBT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, u, 333, com2d, &request); // tag 333 is bottom
-    //MPI_Wait(&request, &status);
-    //printf("My bottom no phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
+      for(int eq = 0; eq < NEQ; eq++)
+        tempBT->Q[eq].row(j) = U->Q[eq].row(jco+sign*j);
 
-    //printf("My top no phys my rank is %d: My neighbors are left:%d right:%d up:%d down:%d\n", rank, l, r, u ,d);
+    MPI_Isend(tempBT->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &request); //tag333bot
   }
+  //////////////////////////////////////////////
+
   delete[] tempBT->Q_raw; tempBT->Q_raw = NULL;
 }
 
@@ -269,14 +192,15 @@ void setBcRecv(Map2Eigen* U, MPI_Comm& com2d,  constants C)
   ///////////////////// LEFT RIGHT ////////////////////////
   Map2Eigen *tempL= new Map2Eigen(njc , C.num_ghost, NEQ);
   Map2Eigen *tempR= new Map2Eigen(njc , C.num_ghost, NEQ);
+  int recvSize = njc*C.num_ghost*NEQ;
 
   // Receive data for the left
   //MPI_Recv(tempL->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, l, 111, com2d, &status);
   //MPI_Recv(tempR->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, r, 222, com2d, &status);
-  MPI_Irecv(tempL->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, l, 111, com2d, &request);
-  //MPI_Wait(&request, &status);
-  MPI_Irecv(tempR->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, r, 222, com2d, &request);
-  //MPI_Wait(&request, &status);
+  MPI_Irecv(tempL->Q_raw, recvSize, MPI_DOUBLE, l, 111, com2d, &request);
+  MPI_Wait(&request, &status);
+  MPI_Irecv(tempR->Q_raw, recvSize, MPI_DOUBLE, r, 222, com2d, &request);
+  MPI_Wait(&request, &status);
   // Fill in data for the left
   for(int eq = 0; eq < NEQ; eq++)
   {
@@ -296,14 +220,13 @@ void setBcRecv(Map2Eigen* U, MPI_Comm& com2d,  constants C)
   Map2Eigen *tempB= new Map2Eigen(C.num_ghost, nic, NEQ);
   Map2Eigen *tempT= new Map2Eigen(C.num_ghost, nic, NEQ);
 
+  recvSize = nic*C.num_ghost*NEQ;
 
   if (d > 0)// then need receive lower ghost info
   {
     //MPI_Recv(tempB->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, d, 333, com2d, &status);
-    MPI_Irecv(tempB->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, d, 333, com2d, &request);
-
-  
-    //MPI_Wait(&request, &status);
+    MPI_Irecv(tempB->Q_raw, recvSize, MPI_DOUBLE, d, 333, com2d, &request);
+    MPI_Wait(&request, &status);
     int jg = C.num_ghost-1;
     for(int eq = 0; eq < NEQ; eq++)
       for(int j = 0; j < C.num_ghost; j++)
@@ -316,7 +239,7 @@ void setBcRecv(Map2Eigen* U, MPI_Comm& com2d,  constants C)
     //MPI_Recv(tempT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, u, 444, com2d, &status);
     MPI_Irecv(tempT->Q_raw, nic*C.num_ghost*NEQ, MPI_DOUBLE, u, 444, com2d, &request);
 
-    //MPI_Wait(&request, &status);
+    MPI_Wait(&request, &status);
     int jg = (njc-C.num_ghost);
     for(int eq = 0; eq < NEQ; eq++)
       for(int j = 0; j < C.num_ghost; j++)

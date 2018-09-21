@@ -86,7 +86,7 @@ int main(int argc, char *argv[]){
   if(rank == 0)
     cout << " Receiving BC " << endl;
   setBcRecv(U, com2d, C);
-  //MPI_Barrier(com2d);
+  MPI_Barrier(com2d);
 
   outputArrayMap(outputFolder, "UL", U, rank);
   outputArrayMap(outputFolder, "VL", V, rank);
@@ -97,7 +97,9 @@ int main(int argc, char *argv[]){
 
   int n=0;
 
+  //cout << "Before stitch" << endl;
 
+  MPI_Barrier(com2d);
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
 
   if(rank == 0)
