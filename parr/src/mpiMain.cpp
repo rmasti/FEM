@@ -100,7 +100,7 @@ int main(int argc, char *argv[]){
   //cout << "Before stitch" << endl;
 
   MPI_Barrier(com2d);
-  stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
+  //stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
 
   if(rank == 0)
     cout << " Entering Time Loop " << endl;

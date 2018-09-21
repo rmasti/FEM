@@ -77,8 +77,6 @@ void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd
   jco = C.num_ghost; // bott inter offset
   jgo = C.num_ghost- 1;
   sign = +1;
-  out = d;
-  tag = 444;
 
   int iff;
   int jc;
@@ -115,6 +113,8 @@ void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd
   }
   else // not phys bndry
   {
+    out = d;
+    tag = 444;
     for(int j = 0; j < C.num_ghost; j++)
       for(int eq = 0; eq < NEQ; eq++)
         tempBT->Q[eq].row(j) = U->Q[eq].row(jco+sign*j);
@@ -198,9 +198,9 @@ void setBcRecv(Map2Eigen* U, MPI_Comm& com2d,  constants C)
   //MPI_Recv(tempL->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, l, 111, com2d, &status);
   //MPI_Recv(tempR->Q_raw, njc*C.num_ghost*NEQ, MPI_DOUBLE, r, 222, com2d, &status);
   MPI_Irecv(tempL->Q_raw, recvSize, MPI_DOUBLE, l, 111, com2d, &request);
-  MPI_Wait(&request, &status);
+  //MPI_Wait(&request, &status);
   MPI_Irecv(tempR->Q_raw, recvSize, MPI_DOUBLE, r, 222, com2d, &request);
-  MPI_Wait(&request, &status);
+  //MPI_Wait(&request, &status);
   // Fill in data for the left
   for(int eq = 0; eq < NEQ; eq++)
   {
