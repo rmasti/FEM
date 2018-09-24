@@ -267,7 +267,7 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
   int njc = U->Q[rhoid].rows();
   int nic = U->Q[rhoid].cols();
 
-  MPI_Request request; 
+  MPI_Request requestOut[4]; 
   MPI_Request requestIn[4]; 
   MPI_Status status; 
 
@@ -297,7 +297,7 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
     tempLR->Q[byid] =-1.0*tempLR->Q[byid];
   }
   // sent to left 
-  MPI_Isend(tempLR->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &request);//tag222 is right
+  MPI_Isend(tempLR->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &requestOut[0]);//tag222 is right
 
   // recv from left fill U
   int in = l;
@@ -306,7 +306,7 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
 
   for(int i = 0; i < C.num_ghost; i++)
     for(int eq = 0; eq < NEQ; eq++)
-      U->Q[eq].col(ic+sign*i) = tempLR->Q[eq].col(i);
+      U->Q[eq].col((ic-1)-sign*i) = tempLR->Q[eq].col(i);
   ////////////////////////////////////////
 
   ////////////// do right ////////////////
@@ -327,7 +327,7 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
     tempLR->Q[byid] =-1.0*tempLR->Q[byid];
   }
   // sent to right
-  MPI_Isend(tempLR->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &request); //tag222 is right
+  MPI_Isend(tempLR->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &requestOut[1]); //tag222 is right
   
   tag = 222;
   in = r;
@@ -335,8 +335,7 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
   MPI_Irecv(tempLR->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[1]);
   for(int i = 0; i < C.num_ghost; i++)
     for(int eq = 0; eq < NEQ; eq++)
-      U->Q[eq].col(ic+sign*i) = tempLR->Q[eq].col(i);
-
+      U->Q[eq].col(ic+1-sign*i) = tempLR->Q[eq].col(i); // fill in data on right
   /////////////////////////////////////
   delete[] tempLR->Q_raw; tempLR->Q_raw = NULL;
 
@@ -395,16 +394,16 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
         tempBT->Q[eq].row(j) = U->Q[eq].row(jco+sign*j);
 
     // send bott dat
-    MPI_Isend(tempBT->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &request); //tag444top
+    MPI_Isend(tempBT->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &requestOut[2]); //tag444top
 
     in = d;
     tag = 333;
     // recv bott dat
-    MPI_Irecv(tempBT->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[3]); //tag444top
+    MPI_Irecv(tempBT->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[2]); //tag444top
 
     for(int j = 0; j < C.num_ghost; j++)
       for(int eq = 0; eq < NEQ; eq++)
-        U->Q[eq].row(jco+sign*j) = tempBT->Q[eq].row(j);
+        U->Q[eq].row(jco-1-sign*j) = tempBT->Q[eq].row(j); // fill in bottom data shift and flip sign
   }
 
   ////////////////// do upper //////////////////////
@@ -450,19 +449,21 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
         tempBT->Q[eq].row(j) = U->Q[eq].row(jco+sign*j);
 
     // send top data
-    MPI_Isend(tempBT->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &request); //tag333bot
+    MPI_Isend(tempBT->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &requestOut[3]); //tag333bot
 
     in = u;
-    tag = 444;
+    tag = 444; // data coming in from top
     // recv top data
-    
-    MPI_Irecv(tempBT->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[4]); //tag444top
+    //
+    MPI_Irecv(tempBT->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[3]); //tag444top
 
+    cout << tempBT->Q[rhoid] << endl;
     for(int j = 0; j < C.num_ghost; j++)
       for(int eq = 0; eq < NEQ; eq++)
-        U->Q[eq].row(jco+sign*j) = tempBT->Q[eq].row(j);
+        U->Q[eq].row(jco+1-sign*j) = tempBT->Q[eq].row(j);
   }
   //////////////////////////////////////////////
+
 
   delete[] tempBT->Q_raw; tempBT->Q_raw = NULL;
 }

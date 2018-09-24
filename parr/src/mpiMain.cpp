@@ -40,12 +40,8 @@ int main(int argc, char *argv[]){
   int coordMax[2]={0, 0};
   MPI_Cart_coords(com2d, rank, 2, coordMax);
 
-  //MPI_Allreduce(&coordMax[0], &coordMax[0], 1, MPI_INT, MPI_MAX, com2d);
-  //MPI_Allreduce(&coordMax[1], &coordMax[1], 1, MPI_INT, MPI_MAX, com2d);
-  coordMax[0] = 1;
-  coordMax[1] = 1;
-
-  printf("coordmax[%d] = %d, coordmax[%d] = %d\n", 0, coordMax[0], 1, coordMax[1]);
+  MPI_Allreduce(&coordMax[0], &coordMax[0], 1, MPI_INT, MPI_MAX, com2d);
+  MPI_Allreduce(&coordMax[1], &coordMax[1], 1, MPI_INT, MPI_MAX, com2d);
 
   MPI_Comm_rank(com2d, &rank);
 
@@ -89,6 +85,7 @@ int main(int argc, char *argv[]){
   //MPI_Barrier(com2d);
 
   // recv while you send
+  //cout << " setting bc " << endl;
   mpiSetBc(U, nixL, niyL, njxL, njyL, com2d,  C);
 
   MPI_Barrier(com2d);
@@ -105,7 +102,7 @@ int main(int argc, char *argv[]){
   //cout << "Before stitch" << endl;
 
   MPI_Barrier(com2d);
-  //stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
+  stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
 
   if(rank == 0)
     cout << " Entering Time Loop " << endl;
