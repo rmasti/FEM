@@ -156,6 +156,8 @@ MPI_Comm meshBlock(const string mesh, const string outputFolder, RowMajorMatrixX
 
 void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd& niy, const RowMajorMatrixXd& njx, const RowMajorMatrixXd& njy, MPI_Comm& com2d,  constants C);
 
+void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd& niy, const RowMajorMatrixXd& njx, const RowMajorMatrixXd& njy, MPI_Comm& com2d,  constants C);
+
 void setBcRecv(Map2Eigen* U, MPI_Comm& com2d,  constants C);
 
 void computeCoord(int& l, int& r, int& d, int& u, MPI_Comm& com2d);

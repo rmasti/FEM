@@ -37,11 +37,15 @@ int main(int argc, char *argv[]){
   MPI_Comm com2d;
   com2d = meshBlock(mesh, outputFolder, xcL_g, ycL_g, nixL, niyL, njxL, njyL, AiL, AjL, VolumeL, C);
 
-  int coordMax[2];
+  int coordMax[2]={0, 0};
   MPI_Cart_coords(com2d, rank, 2, coordMax);
-  MPI_Allreduce(&coordMax[0], &coordMax[0], 1, MPI_INT, MPI_MAX, com2d);
-  MPI_Allreduce(&coordMax[1], &coordMax[1], 1, MPI_INT, MPI_MAX, com2d);
 
+  //MPI_Allreduce(&coordMax[0], &coordMax[0], 1, MPI_INT, MPI_MAX, com2d);
+  //MPI_Allreduce(&coordMax[1], &coordMax[1], 1, MPI_INT, MPI_MAX, com2d);
+  coordMax[0] = 1;
+  coordMax[1] = 1;
+
+  printf("coordmax[%d] = %d, coordmax[%d] = %d\n", 0, coordMax[0], 1, coordMax[1]);
 
   MPI_Comm_rank(com2d, &rank);
 
@@ -79,13 +83,14 @@ int main(int argc, char *argv[]){
 
   U_RK = U;
 
-  if(rank == 0)
-    cout << " Sending BC " << endl;
-  setBcSend(U, nixL, niyL, njxL, njyL, com2d,  C);
+  // send and recv func
+  //setBcSend(U, nixL, niyL, njxL, njyL, com2d,  C);
+  //setBcRecv(U, com2d, C);
   //MPI_Barrier(com2d);
-  if(rank == 0)
-    cout << " Receiving BC " << endl;
-  setBcRecv(U, com2d, C);
+
+  // recv while you send
+  mpiSetBc(U, nixL, niyL, njxL, njyL, com2d,  C);
+
   MPI_Barrier(com2d);
 
   outputArrayMap(outputFolder, "UL", U, rank);
