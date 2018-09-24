@@ -37,11 +37,11 @@ int main(int argc, char *argv[]){
   MPI_Comm com2d;
   com2d = meshBlock(mesh, outputFolder, xcL_g, ycL_g, nixL, niyL, njxL, njyL, AiL, AjL, VolumeL, C);
 
-  int coordMax[2]={0, 0};
-  MPI_Cart_coords(com2d, rank, 2, coordMax);
+  int coordMax[2]={1, 1};
+  //MPI_Cart_coords(com2d, rank, 2, coordMax);
 
-  MPI_Allreduce(&coordMax[0], &coordMax[0], 1, MPI_INT, MPI_MAX, com2d);
-  MPI_Allreduce(&coordMax[1], &coordMax[1], 1, MPI_INT, MPI_MAX, com2d);
+  //MPI_Allreduce(&coordMax[0], &coordMax[0], 1, MPI_INT, MPI_MAX, com2d);
+  //MPI_Allreduce(&coordMax[1], &coordMax[1], 1, MPI_INT, MPI_MAX, com2d);
 
   MPI_Comm_rank(com2d, &rank);
 
