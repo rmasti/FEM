@@ -271,11 +271,9 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
   MPI_Request requestIn[4]; 
   MPI_Status status; 
 
-  /////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////// SEND LEFT AND RIGHT DATA  //////////////////////////////////
-  /////////////////////////////////////////////////////////////////////////////////////////
 
-  int ic, sign, out, tag; // create items to be passed to if statements
+  int ic, sign, out, tag, in; // create items to be passed to if statements
   int sendSize = njc*C.num_ghost*NEQ;
   /////////////////// do left////////////////
   Map2Eigen *tempLout = new Map2Eigen(njc , C.num_ghost, NEQ);
@@ -298,18 +296,6 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
   }
   // sent to left 
   MPI_Isend(tempLout->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &requestOut[0]);//tag222 is right
-  delete[] tempLout->Q_raw; tempLout->Q_raw = NULL;
-
-  // recv from left fill U
-  Map2Eigen *tempLin  = new Map2Eigen(njc , C.num_ghost, NEQ);
-  int in = l;
-  tag = 111;
-  MPI_Irecv(tempLin->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[0]);
-  for(int i = 0; i < C.num_ghost; i++)
-    for(int eq = 0; eq < NEQ; eq++)
-      U->Q[eq].col((ic-1)-sign*i) = tempLin->Q[eq].col(i);
-  delete[] tempLin->Q_raw; tempLin->Q_raw = NULL;
-  ////////////////////////////////////////
 
   ////////////// do right ////////////////
   Map2Eigen *tempRout = new Map2Eigen(njc , C.num_ghost, NEQ);
@@ -331,25 +317,13 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
   }
   // sent to right
   MPI_Isend(tempRout->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &requestOut[1]); //tag222 is right
-  delete[] tempRout->Q_raw; tempRout->Q_raw = NULL;
-  
-  // recv from right
-  Map2Eigen *tempRin  = new Map2Eigen(njc , C.num_ghost, NEQ);
-  tag = 222;
-  in = r;
-  MPI_Irecv(tempRin->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[1]);
-  for(int i = 0; i < C.num_ghost; i++)
-    for(int eq = 0; eq < NEQ; eq++)
-      U->Q[eq].col(ic+1-sign*i) = tempRin->Q[eq].col(i); // fill in data on right
-  delete[] tempRin->Q_raw; tempRin->Q_raw = NULL;
-  /////////////////////////////////////
 
-  /////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////// SEND BOTT AND TOP  DATA  //////////////////////////////////
-  /////////////////////////////////////////////////////////////////////////////////////////
   sendSize = nic*C.num_ghost*NEQ;
 
   /////////////////// do bottom ///////////////////////
+  Map2Eigen *tempBout  = new Map2Eigen(C.num_ghost, nic, NEQ);
+  Map2Eigen *tempBin  = new Map2Eigen(C.num_ghost, nic, NEQ);
   int jfo, jgo, jco;
   jfo = 0;// bottom face
   jco = C.num_ghost; // bott inter offset
@@ -391,9 +365,8 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
   }
   else // not phys bndry
   {
-  
+
     // send bott dat
-    Map2Eigen *tempBout  = new Map2Eigen(C.num_ghost, nic, NEQ);
     out = d;
     tag = 444;
     for(int j = 0; j < C.num_ghost; j++)
@@ -401,22 +374,11 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
         tempBout->Q[eq].row(j) = U->Q[eq].row(jco+sign*j);
 
     MPI_Isend(tempBout->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &requestOut[2]); //tag444top
-    delete[] tempBout->Q_raw; tempBout->Q_raw = NULL;
-
-    // recv bott dat
-    Map2Eigen *tempBin  = new Map2Eigen(C.num_ghost, nic, NEQ);
-    in = d;
-    tag = 333;
-    MPI_Irecv(tempBin->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[2]); //tag444top
-
-    for(int j = 0; j < C.num_ghost; j++)
-      for(int eq = 0; eq < NEQ; eq++)
-        U->Q[eq].row(jco-1-sign*j) = tempBin->Q[eq].row(j); // fill in bottom data shift and flip sign
-
-    delete[] tempBin->Q_raw; tempBin->Q_raw = NULL;
   }
 
   ////////////////// do upper //////////////////////
+  Map2Eigen *tempTout  = new Map2Eigen(C.num_ghost, nic, NEQ);
+  Map2Eigen *tempTin  = new Map2Eigen(C.num_ghost, nic, NEQ);
   jfo = njx.rows()-1;// top face
   jco = njc - C.num_ghost - 1; // top inter offset
   jgo = (njc-C.num_ghost);
@@ -452,10 +414,7 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
   }
   else // not phys bndry on top
   {
-
     // send top data
-    Map2Eigen *tempTout  = new Map2Eigen(C.num_ghost, nic, NEQ);
-  
     out = u;
     tag = 333;
     for(int j = 0; j < C.num_ghost; j++)
@@ -463,22 +422,72 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
         tempTout->Q[eq].row(j) = U->Q[eq].row(jco+sign*j);
 
     MPI_Isend(tempTout->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &requestOut[3]); //tag333bot
-    delete[] tempTout->Q_raw; tempTout->Q_raw = NULL;
+  }
 
-
-    // recv top data
+  /////////////////////// RECEIVE DATA ///////////////////////  
+  // recv from left fill U
+  Map2Eigen *tempLin  = new Map2Eigen(njc , C.num_ghost, NEQ);
+  in = l;
+  tag = 111;
+  ic = C.num_ghost;
+  sign = +1;
+  MPI_Irecv(tempLin->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[0]);
+  MPI_Wait(&requestIn[0], &status);
+  for(int i = 0; i < C.num_ghost; i++)
+    for(int eq = 0; eq < NEQ; eq++)
+      U->Q[eq].col((ic-1)-sign*i) = tempLin->Q[eq].col(i);
+  ////////////////////////////////////////
+  // recv from right
+  Map2Eigen *tempRin  = new Map2Eigen(njc , C.num_ghost, NEQ);
+  tag = 222;
+  in = r;
+  ic =(nic-C.num_ghost)-1; // first cell layer on right 
+  sign = -1;
+  MPI_Irecv(tempRin->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[1]);
+  MPI_Wait(&requestIn[1], &status);
+  for(int i = 0; i < C.num_ghost; i++)
+    for(int eq = 0; eq < NEQ; eq++)
+      U->Q[eq].col(ic+1-sign*i) = tempRin->Q[eq].col(i); // fill in data on right
+  /////////////////////////////////////
+  // recv bott dat
+  if (d > 0)
+  {
+    Map2Eigen *tempBin  = new Map2Eigen(C.num_ghost, nic, NEQ);
+    sign = +1;
+    jco = C.num_ghost; // bott inter offset
+    in = d;
+    tag = 333;
+    MPI_Irecv(tempBin->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[2]); //tag444top
+    MPI_Wait(&requestIn[2], &status);
+    for(int j = 0; j < C.num_ghost; j++)
+      for(int eq = 0; eq < NEQ; eq++)
+        U->Q[eq].row(jco-1-sign*j) = tempBin->Q[eq].row(j); // fill in bottom data shift and flip sign
+  }
+  /////////////////////////////////////
+  // recv top data
+  if(u > 0)
+  {
     Map2Eigen *tempTin  = new Map2Eigen(C.num_ghost, nic, NEQ);
-
+    sign = -1;
+    jco = njc - C.num_ghost - 1; // top inter offset
     in = u;
     tag = 444; // data coming in from top
     MPI_Irecv(tempTin->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn[3]); //tag444top
+    MPI_Wait(&requestIn[3], &status);
 
-    cout << tempTin->Q[rhoid] << endl;
     for(int j = 0; j < C.num_ghost; j++)
       for(int eq = 0; eq < NEQ; eq++)
         U->Q[eq].row(jco+1-sign*j) = tempTin->Q[eq].row(j);
-
-    delete[] tempTin->Q_raw; tempTin->Q_raw = NULL;
   }
+  ///////////////////////////////////
+
+  delete[] tempTin->Q_raw; tempTin->Q_raw = NULL;
+  delete[] tempTout->Q_raw; tempTout->Q_raw = NULL;
+  delete[] tempLout->Q_raw; tempLout->Q_raw = NULL;
+  delete[] tempRout->Q_raw; tempRout->Q_raw = NULL;
+  delete[] tempLin->Q_raw; tempLin->Q_raw = NULL;
+  delete[] tempRin->Q_raw; tempRin->Q_raw = NULL;
+  delete[] tempBin->Q_raw; tempBin->Q_raw = NULL;
+  delete[] tempBout->Q_raw; tempBout->Q_raw = NULL;
 }
 

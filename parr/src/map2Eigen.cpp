@@ -72,7 +72,7 @@ void stitchMap2EigenWrite(string Address, string FileName, Map2Eigen* IN, const 
           r = (j*nip)+i;
 
           MPI_Irecv(temp->Q_raw, sizeDat, MPI_DOUBLE, r, 111*r, com2d, &requestIn); 
-          //MPI_Wait(&requestIn,&status);
+          MPI_Wait(&requestIn,&status);
           for(int eq = 0; eq < NEQ; eq++)
             out->Q[eq].block(njc*j,nic*i, njc, nic) = temp->Q[eq];
         }      

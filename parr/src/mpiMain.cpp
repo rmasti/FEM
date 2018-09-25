@@ -4,7 +4,7 @@ int main(int argc, char *argv[]){
   MPI_Init(&argc, &argv);
 
   constants C;
-  C.f_limiter = 7;
+  C.f_limiter = 1;
   C.num_ghost = 3;
   C.cfl = 0.45;
   C.nmax = 10000;
@@ -38,10 +38,10 @@ int main(int argc, char *argv[]){
   com2d = meshBlock(mesh, outputFolder, xcL_g, ycL_g, nixL, niyL, njxL, njyL, AiL, AjL, VolumeL, C);
 
   int coordMax[2]={1, 1};
-  //MPI_Cart_coords(com2d, rank, 2, coordMax);
+  MPI_Cart_coords(com2d, rank, 2, coordMax);
 
-  //MPI_Allreduce(&coordMax[0], &coordMax[0], 1, MPI_INT, MPI_MAX, com2d);
-  //MPI_Allreduce(&coordMax[1], &coordMax[1], 1, MPI_INT, MPI_MAX, com2d);
+  MPI_Allreduce(&coordMax[0], &coordMax[0], 1, MPI_INT, MPI_MAX, com2d);
+  MPI_Allreduce(&coordMax[1], &coordMax[1], 1, MPI_INT, MPI_MAX, com2d);
 
   MPI_Comm_rank(com2d, &rank);
 
@@ -86,6 +86,9 @@ int main(int argc, char *argv[]){
 
   // recv while you send
   //cout << " setting bc " << endl;
+  if(rank == 0)
+    cout << " Setting BC " << endl;
+ 
   mpiSetBc(U, nixL, niyL, njxL, njyL, com2d,  C);
 
   MPI_Barrier(com2d);
@@ -108,14 +111,12 @@ int main(int argc, char *argv[]){
     cout << " Entering Time Loop " << endl;
 
   
-  /*
   while(time(0, n) < tend)
   {
     for (int k = 0; k < RKORDER; k++)
     {
-      setBcSend(U, nixL, niyL, njxL, njyL, com2d,  C);
+      mpiSetBc(U, nixL, niyL, njxL, njyL, com2d,  C);
 
-      setBcRecv(U, com2d, C);
       MPI_Barrier(com2d);
 
       computeSourceTerm(S, U_RK, xcL, ycL, C);
@@ -154,9 +155,8 @@ int main(int argc, char *argv[]){
       stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
 
   }
-
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
-  */
+
   MPI_Finalize();
   return 0;
 }
