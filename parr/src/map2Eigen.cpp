@@ -45,14 +45,13 @@ void stitchMap2EigenWrite(string Address, string FileName, Map2Eigen* IN, const 
 
   int r;
 
-
   Map2Eigen *temp = new Map2Eigen(njc, nic, NEQ);
   int sizeDat = njc*nic*NEQ; 
   if (rank != 0) // send the data
   {
     for(int eq = 0; eq < NEQ; eq++)
       temp->Q[eq] = IN->Q[eq].block(C.num_ghost, C.num_ghost, njc, nic);
-    MPI_Isend(temp->Q_raw, sizeDat, MPI_DOUBLE, 0, rank*111, com2d, &requestOut);
+    MPI_Send(temp->Q_raw, sizeDat, MPI_DOUBLE, 0, rank*111, com2d);
   }
 
   //MPI_Wait(&requestOut,&status);
@@ -71,8 +70,7 @@ void stitchMap2EigenWrite(string Address, string FileName, Map2Eigen* IN, const 
         {
           r = (j*nip)+i;
 
-          MPI_Irecv(temp->Q_raw, sizeDat, MPI_DOUBLE, r, 111*r, com2d, &requestIn); 
-          MPI_Wait(&requestIn,&status);
+          MPI_Recv(temp->Q_raw, sizeDat, MPI_DOUBLE, r, 111*r, com2d, &status); 
           for(int eq = 0; eq < NEQ; eq++)
             out->Q[eq].block(njc*j,nic*i, njc, nic) = temp->Q[eq];
         }      

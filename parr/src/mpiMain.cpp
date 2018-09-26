@@ -9,7 +9,7 @@ int main(int argc, char *argv[]){
   C.cfl = 0.45;
   C.nmax = 10000;
   C.wint = 500;
-  C.pint = 1;
+  C.pint = 10;
   double A = (2-1)/(1.0+2.0);
   double tend = 6.0/sqrt(A*ACCEL*2);
   double dt;
@@ -35,6 +35,7 @@ int main(int argc, char *argv[]){
   if(rank == 0)
     cout << " Grabbing Geometry " << endl;
   MPI_Comm com2d;
+
   com2d = meshBlock(mesh, outputFolder, xcL_g, ycL_g, nixL, niyL, njxL, njyL, AiL, AjL, VolumeL, C);
 
   int coordMax[2]={1, 1};
@@ -78,7 +79,8 @@ int main(int argc, char *argv[]){
   primToCons(U,V);
 
   U_RK = U;
-
+  outputArrayMap(outputFolder, "UL", U, rank);
+ 
   // send and recv func
   //setBcSend(U, nixL, niyL, njxL, njyL, com2d,  C);
   //setBcRecv(U, com2d, C);
@@ -93,8 +95,8 @@ int main(int argc, char *argv[]){
 
   MPI_Barrier(com2d);
 
-  outputArrayMap(outputFolder, "UL", U, rank);
-  outputArrayMap(outputFolder, "VL", V, rank);
+  //outputArrayMap(outputFolder, "UL", U, rank);
+  //outputArrayMap(outputFolder, "VL", V, rank);
   outputArray(outputFolder, "xcL_g", xcL_g, rank+size);
 
   dt = computeTimeStepU(VolumeL, AiL, AjL, nixL, niyL, njxL, njyL, U, C);
@@ -105,13 +107,14 @@ int main(int argc, char *argv[]){
   //cout << "Before stitch" << endl;
 
   MPI_Barrier(com2d);
+
+  outputArrayMap(outputFolder, "UL", U, rank);
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
 
   if(rank == 0)
     cout << " Entering Time Loop " << endl;
 
-  
-  while(time(0, n) < tend)
+  while(time(0, n) < tend )//&& n < 400)
   {
     for (int k = 0; k < RKORDER; k++)
     {
@@ -147,15 +150,21 @@ int main(int argc, char *argv[]){
 
 
     MPI_Comm_rank(com2d, &rank);
-    if (rank == 0)
-      if(n%C.pint == 0)
+      
+    if(n%C.pint == 0)
+      if (rank == 0)
         cout << "time  = " << time(0,n) << ", n = " << n << endl;
 
     if(n%C.wint == 0) // Write to file by rank 0 gather and output
-      stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
+    {
+      if(rank == 0)
+        cout << " Write To File..." << endl;
 
+      stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
+    }
   }
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
+  //outputArrayMap(outputFolder, "UL", U, rank);
 
   MPI_Finalize();
   return 0;
