@@ -4,6 +4,7 @@
  * 10/03/2018
  * This function has rank 0 compute areas, volume, coord, normal vecs
  * and distributes them to the other ranks
+ * It also returns the cart 2d communicator
  */
 #include "mhdRT.hpp"
 
@@ -198,18 +199,22 @@ MPI_Comm meshBlock(
     MPI_Recv(xcL_g.data(), nxbg*nybg, MPI_DOUBLE, source, 111, com2d, &status);
     MPI_Recv(ycL_g.data(), nxbg*nybg, MPI_DOUBLE, source, 222, com2d, &status);
     
+    // fill normal vecs i dir
     nixL.resize(nyb, nxb+1), niyL.resize(nyb, nxb+1);
     MPI_Recv(nixL.data(), nyb*(nxb+1), MPI_DOUBLE, source, 333, com2d, &status);
     MPI_Recv(niyL.data(), nyb*(nxb+1), MPI_DOUBLE, source, 444, com2d, &status);
 
+    // fill normal vecs j dir
     njxL.resize(nyb+1, nxb), njyL.resize(nyb+1, nxb);
     MPI_Recv(njxL.data(), nxb*(nyb+1), MPI_DOUBLE, source, 555, com2d, &status);
     MPI_Recv(njyL.data(), nxb*(nyb+1), MPI_DOUBLE, source, 666, com2d, &status);
 
+    // fill areas
     AiL.resize(nyb, nxb+1), AjL.resize(nyb+1, nxb);
     MPI_Recv(AiL.data(), nyb*(nxb+1), MPI_DOUBLE, source, 777, com2d, &status);
     MPI_Recv(AjL.data(), nxb*(nyb+1), MPI_DOUBLE, source, 888, com2d, &status);
 
+    // fill volumes
     VolumeL.resize(nyb, nxb);
     MPI_Recv(VolumeL.data(), nyb*nxb, MPI_DOUBLE, source, 1111, com2d, &status);
   }
