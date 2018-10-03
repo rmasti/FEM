@@ -192,78 +192,26 @@ MPI_Comm meshBlock(
     int nxbg = nxb+2*ng;
     int nybg = nyb+2*ng;
 
-    xcL_g.resize(nybg, nxbg);
-    ycL_g.resize(nybg, nxbg);
-    double *xcL_gP = new double [(nxbg)*(nybg)];
-    double *ycL_gP = new double [(nxbg)*(nybg)];
-    // get xcg and ycg locall for ranks 1->size
-    MPI_Recv(xcL_gP, nxbg*nybg, MPI_DOUBLE, source, 111, com2d, &status);
-    MPI_Recv(ycL_gP, nxbg*nybg, MPI_DOUBLE, source, 222, com2d, &status);
-    for(int j = 0; j < nybg; j++)
-      for(int i = 0; i < nxbg; i++)
-      {
-        xcL_g(j,i) = xcL_gP[j*nxbg+i];
-        ycL_g(j,i) = ycL_gP[j*nxbg+i];
-      }
-    delete[] xcL_gP; xcL_gP=NULL;
-    delete[] ycL_gP; ycL_gP=NULL;
 
-    //MPI_Recv(xcL_g.data(), nxbg*nybg, MPI_DOUBLE, source, 111, com2d, &status);
-    //MPI_Recv(ycL_g.data(), nxbg*nybg, MPI_DOUBLE, source, 222, com2d, &status);
+    // get xcg and ycg locall for ranks 1->size
+    xcL_g.resize(nybg, nxbg), ycL_g.resize(nybg, nxbg);
+    MPI_Recv(xcL_g.data(), nxbg*nybg, MPI_DOUBLE, source, 111, com2d, &status);
+    MPI_Recv(ycL_g.data(), nxbg*nybg, MPI_DOUBLE, source, 222, com2d, &status);
     
     nixL.resize(nyb, nxb+1), niyL.resize(nyb, nxb+1);
-    double *nixLP = new double [nyb*(nxb+1)];
-    double *niyLP = new double [nyb*(nxb+1)];
-    MPI_Recv(nixLP, nyb*(nxb+1), MPI_DOUBLE, source, 333, com2d, &status);
-    MPI_Recv(niyLP, nyb*(nxb+1), MPI_DOUBLE, source, 444, com2d, &status);
-    for(int j = 0; j < nyb; j++)
-      for(int i = 0; i < nxb+1; i++)
-      {
-        nixL(j,i) = nixLP[j*(nxb+1)+i];
-        niyL(j,i) = niyLP[j*(nxb+1)+i];
-      }
-    delete[] nixLP; nixLP=NULL;
-    delete[] niyLP; niyLP=NULL;
-
+    MPI_Recv(nixL.data(), nyb*(nxb+1), MPI_DOUBLE, source, 333, com2d, &status);
+    MPI_Recv(niyL.data(), nyb*(nxb+1), MPI_DOUBLE, source, 444, com2d, &status);
 
     njxL.resize(nyb+1, nxb), njyL.resize(nyb+1, nxb);
-    double *njxLP = new double [nxb*(nyb+1)];
-    double *njyLP = new double [nxb*(nyb+1)];
-    MPI_Recv(njxLP, nxb*(nyb+1), MPI_DOUBLE, source, 555, com2d, &status);
-    MPI_Recv(njyLP, nxb*(nyb+1), MPI_DOUBLE, source, 666, com2d, &status);
-    for(int j = 0; j < nyb+1; j++)
-      for(int i = 0; i < nxb; i++)
-      {
-        njxL(j,i) = njxLP[j*nxb+i];
-        njyL(j,i) = njyLP[j*nxb+i];
-      }
-    delete[] njxLP; njxLP=NULL;
-    delete[] njyLP; njyLP=NULL;
-
+    MPI_Recv(njxL.data(), nxb*(nyb+1), MPI_DOUBLE, source, 555, com2d, &status);
+    MPI_Recv(njyL.data(), nxb*(nyb+1), MPI_DOUBLE, source, 666, com2d, &status);
 
     AiL.resize(nyb, nxb+1), AjL.resize(nyb+1, nxb);
-    double *AiLP = new double [nyb*(nxb+1)];
-    double *AjLP = new double [nxb*(nyb+1)];
-
-    MPI_Recv(AiLP, nyb*(nxb+1), MPI_DOUBLE, source, 777, com2d, &status);
-    MPI_Recv(AjLP, nxb*(nyb+1), MPI_DOUBLE, source, 888, com2d, &status);
-    for(int j = 0; j < nyb; j++)
-      for(int i = 0; i < nxb+1; i++)
-        AiL(j,i) = AiLP[j*(nxb+1)+i];
-    for(int j = 0; j < nyb+1; j++)
-      for(int i = 0; i < nxb; i++)
-        AjL(j,i) = AjLP[j*(nxb)+i];
-    delete[] AiLP; AiLP=NULL;
-    delete[] AjLP; AjLP=NULL;
-
+    MPI_Recv(AiL.data(), nyb*(nxb+1), MPI_DOUBLE, source, 777, com2d, &status);
+    MPI_Recv(AjL.data(), nxb*(nyb+1), MPI_DOUBLE, source, 888, com2d, &status);
 
     VolumeL.resize(nyb, nxb);
-    double *VolumeLP = new double [nyb*nxb];
-    MPI_Recv(VolumeLP, nyb*nxb, MPI_DOUBLE, source, 1111, com2d, &status);
-    for(int j = 0; j < nyb; j++)
-      for(int i = 0; i < nxb; i++)
-        VolumeL(j,i) = VolumeLP[j*nxb+i];
-
+    MPI_Recv(VolumeL.data(), nyb*nxb, MPI_DOUBLE, source, 1111, com2d, &status);
   }
 
   outputArray(outputFolder, "xcL_g", xcL_g, rank);
@@ -278,7 +226,4 @@ MPI_Comm meshBlock(
 
   MPI_Barrier(com2d);
   return com2d;
-
-  //MPI_Cart_coords(com2d, rank, 2, coord);
-  //  printf("My rank is %d: My coordinates are %d, %d\n", rank, coord[0], coord[1]);
 }
