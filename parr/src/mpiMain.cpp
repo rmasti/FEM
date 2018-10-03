@@ -22,6 +22,7 @@ int main(int argc, char *argv[]){
 
   string mesh = "../mesh/debugMatlab.msh";
   string outputFolder = "./output/";
+  //string outputFolder = "/mnt/c/Users/rlm78/Downloads/FEM/";
 
 
   RowMajorMatrixXd xcL_g, ycL_g;

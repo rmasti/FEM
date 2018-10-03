@@ -49,11 +49,13 @@ MAPTESTS = \
 
 MPITEST = \
 	test/mpiExampleEigen.o\
+	src/mhdRT_f.o\
 	src/map2Eigen.o
 	#src/fp_f.o\
 
 MPICARTTEST = \
-	test/mpiCartTest.o
+	test/mpiCartTest.o\
+	src/mhdRT_f.o
 	#src/fp_f.o\
 
 
