@@ -11,8 +11,8 @@
 MPI_Comm meshBlock(
     const string mesh,            //In: mesh name to read
     const string outputFolder,    //In: name of output dir
-    RowMajorMatrixXd &xcL_g,      //Out: local x center coord
-    RowMajorMatrixXd &ycL_g,      //Out: local y center coord
+    RowMajorMatrixXd &xcLg,      //Out: local x center coord
+    RowMajorMatrixXd &ycLg,      //Out: local y center coord
     RowMajorMatrixXd &nixL,       //Out: local x comp norm vec i dir
     RowMajorMatrixXd &niyL,       //Out: local y comp norm vec i dir
     RowMajorMatrixXd &njxL,       //Out: local x comp norm vec j dir
@@ -27,8 +27,6 @@ MPI_Comm meshBlock(
   MPI_Comm_size(MPI_COMM_WORLD, &size); // number of proc
   MPI_Comm_rank(MPI_COMM_WORLD, &rank); // current proc
 
-  MPI_Comm com2d; // Setup cartesian communicator
-
   int ni, nj; 
   int ng = C.num_ghost;
 
@@ -42,20 +40,16 @@ MPI_Comm meshBlock(
   nj = pow(2, (n/2));         // proc vert dir
   ni = pow(2, (n/2) + n%2);   // proc horz dir
 
-  int dim[2] = {nj, ni};      // 2 int array for MPI_Cart_Create
-  int reorder = FALSE;        // ReOrder for fastest comm
-  int period[2];              // periodic boundary partit
-  period[1] = TRUE;            
-  period[0] = FALSE;
-  int coord[2];               // current proc coord
-  int id;                      
+  int dim[2] = {nj, ni};        // 2 int array for MPI_Cart_Create
+  int reorder = FALSE;          // Reorder for fastest comm
+  int period[2] = {FALSE, TRUE};// periodic boundary partit
+  int u, d, l, r;               // up down left right
 
-  int u, d, l, r; // up down left right
-
+  MPI_Comm com2d; // Setup cartesian communicator
   MPI_Cart_create(MPI_COMM_WORLD, 2, dim, period, reorder, &com2d);
   MPI_Comm_rank(com2d, &rank);
-  int nb[2];
 
+  int nb[2];
   // have the first processor read in data and give it to all other ranks
   if(rank == 0)
   {
@@ -120,7 +114,7 @@ MPI_Comm meshBlock(
       MPI_Send(nb, 2, MPI_INT, r, 999, com2d);
 
     // Variables resize to send
-    xcL_g.resize(nybg, nxbg), ycL_g.resize(nybg, nxbg);
+    xcLg.resize(nybg, nxbg), ycLg.resize(nybg, nxbg);
     nixL.resize(nyb, nxb+1), niyL.resize(nyb, nxb+1);
     njxL.resize(nyb+1, nxb), njyL.resize(nyb+1, nxb);
     AiL.resize(nyb, nxb+1), AjL.resize(nyb+1, nxb);
@@ -163,8 +157,8 @@ MPI_Comm meshBlock(
         }
         else // set your own coords
         {
-          xcL_g = xc_g.block(nyb*j, nxb*i, nybg, nxbg);
-          ycL_g = yc_g.block(nyb*j, nxb*i, nybg, nxbg);
+          xcLg = xc_g.block(nyb*j, nxb*i, nybg, nxbg);
+          ycLg = yc_g.block(nyb*j, nxb*i, nybg, nxbg);
 
           nixL = nix.block(nyb*j, nxb*i, nyb, nxb+1);
           niyL = niy.block(nyb*j, nxb*i, nyb, nxb+1);
@@ -195,9 +189,9 @@ MPI_Comm meshBlock(
 
 
     // get xcg and ycg locall for ranks 1->size
-    xcL_g.resize(nybg, nxbg), ycL_g.resize(nybg, nxbg);
-    MPI_Recv(xcL_g.data(), nxbg*nybg, MPI_DOUBLE, source, 111, com2d, &status);
-    MPI_Recv(ycL_g.data(), nxbg*nybg, MPI_DOUBLE, source, 222, com2d, &status);
+    xcLg.resize(nybg, nxbg), ycLg.resize(nybg, nxbg);
+    MPI_Recv(xcLg.data(), nxbg*nybg, MPI_DOUBLE, source, 111, com2d, &status);
+    MPI_Recv(ycLg.data(), nxbg*nybg, MPI_DOUBLE, source, 222, com2d, &status);
     
     // fill normal vecs i dir
     nixL.resize(nyb, nxb+1), niyL.resize(nyb, nxb+1);
@@ -219,8 +213,8 @@ MPI_Comm meshBlock(
     MPI_Recv(VolumeL.data(), nyb*nxb, MPI_DOUBLE, source, 1111, com2d, &status);
   }
 
-  outputArray(outputFolder, "xcL_g", xcL_g, rank);
-  outputArray(outputFolder, "ycL_g", ycL_g, rank);
+  outputArray(outputFolder, "xcLg", xcLg, rank);
+  outputArray(outputFolder, "ycLg", ycLg, rank);
   outputArray(outputFolder, "nixL", nixL, rank);
   outputArray(outputFolder, "niyL", niyL, rank);
   outputArray(outputFolder, "njxL", njxL, rank);

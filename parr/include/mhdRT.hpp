@@ -152,7 +152,7 @@ void setBConU(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
 
 //void meshBlock(const string mesh, const string outputFolder, constants C);
 
-MPI_Comm meshBlock(const string mesh, const string outputFolder, RowMajorMatrixXd &xcL_g, RowMajorMatrixXd &ycL_g, RowMajorMatrixXd &nixL, RowMajorMatrixXd &niyL, RowMajorMatrixXd &njxL, RowMajorMatrixXd &njyL, RowMajorMatrixXd &AiL, RowMajorMatrixXd &AjL, RowMajorMatrixXd &VolumeL, constants C);//
+MPI_Comm meshBlock(const string mesh, const string outputFolder, RowMajorMatrixXd &xcLg, RowMajorMatrixXd &ycLg, RowMajorMatrixXd &nixL, RowMajorMatrixXd &niyL, RowMajorMatrixXd &njxL, RowMajorMatrixXd &njyL, RowMajorMatrixXd &AiL, RowMajorMatrixXd &AjL, RowMajorMatrixXd &VolumeL, constants C);//
 
 void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd& niy, const RowMajorMatrixXd& njx, const RowMajorMatrixXd& njy, MPI_Comm& com2d,  constants C);
 
