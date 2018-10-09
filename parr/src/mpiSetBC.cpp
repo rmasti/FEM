@@ -1,6 +1,13 @@
 #include "mhdRT.hpp"
-
-void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd& niy, const RowMajorMatrixXd& njx, const RowMajorMatrixXd& njy, MPI_Comm& com2d,  constants C)
+ 
+void mpiSetBc(
+    Map2Eigen* U,                 //Out: conserved vars
+    const RowMajorMatrixXd& nix,  //In: norm vec xcomp i dir
+    const RowMajorMatrixXd& niy,  //In: norm vec ycomp i dir
+    const RowMajorMatrixXd& njx,  //In: norm vec xcomp j dir
+    const RowMajorMatrixXd& njy,  //In: norm vec ycomp j dir
+    MPI_Comm& com2d,              //In: Communicator 
+    constants C)                   
 {
   int rank;
   int size;
@@ -74,7 +81,7 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
   int jfo, jgo, jco;
   jfo = 0;// bottom face
   jco = C.num_ghost; // bott inter offset
-  jgo = C.num_ghost- 1;
+  jgo = C.num_ghost - 1;
   sign = +1;
 
   int iff;
@@ -94,16 +101,22 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
         // bottom boundary no penetration conducting wall
         nx = njx(jfo,iff);
         ny = njy(jfo,iff);
+        /*
         uvel = U->Q[uid](jc+sign*j,i);
         vvel = U->Q[vid](jc+sign*j,i);
         bx =  U->Q[bxid](jc+sign*j,i);
         by =  U->Q[byid](jc+sign*j,i);
-
+        */
+        uvel = U->Q[uid](jc,i);
+        vvel = U->Q[vid](jc,i);
+        bx =  U->Q[bxid](jc,i);
+        by =  U->Q[byid](jc,i);
+ 
         U->Q[uid](jg,i) = -nx*(uvel*nx+vvel*ny) - ny*(-uvel*ny + vvel*nx);
         U->Q[vid](jg,i) = -ny*(uvel*nx+vvel*ny) + nx*(-uvel*ny + vvel*nx);
         U->Q[bxid](jg,i) = -nx*(bx*nx+by*ny) - ny*(-bx*ny + by*nx);
         U->Q[byid](jg,i) = -ny*(bx*nx+by*ny) + nx*(-bx*ny + by*nx);
-        // extrapolate
+        // extrapolate from cells above
         U->Q[rhoid](jg,i) = 2.0*U->Q[rhoid](jg+sign*1,i) - U->Q[rhoid](jg+sign*2,i);
         U->Q[wid](jg,i) =   2.0*U->Q[wid](jg+sign*1,i) - U->Q[wid](jg+sign*2,i);
         U->Q[pid](jg,i) =   2.0*U->Q[pid](jg+sign*1,i) - U->Q[pid](jg+sign*2,i);
@@ -143,10 +156,17 @@ void mpiSetBc(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
         // bottom boundary no penetration conducting wall
         nx = njx(jfo,iff);
         ny = njy(jfo,iff);
+
+        /**** BELIEVED BUG *****
         uvel = U->Q[uid](jc+sign*j,i);
         vvel = U->Q[vid](jc+sign*j,i);
         bx =  U->Q[bxid](jc+sign*j,i);
         by =  U->Q[byid](jc+sign*j,i);
+        */
+        uvel = U->Q[uid](jc,i);
+        vvel = U->Q[vid](jc,i);
+        bx =  U->Q[bxid](jc,i);
+        by =  U->Q[byid](jc,i);
 
         U->Q[uid](jg,i) = -nx*(uvel*nx+vvel*ny) - ny*(-uvel*ny + vvel*nx);
         U->Q[vid](jg,i) = -ny*(uvel*nx+vvel*ny) + nx*(-uvel*ny + vvel*nx);
