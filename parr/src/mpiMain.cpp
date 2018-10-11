@@ -37,6 +37,7 @@ int main(int argc, char *argv[]){
     cout << " Grabbing Geometry " << endl;
   MPI_Comm com2d;
 
+
   com2d = meshBlock(mesh, outputFolder, xcL_g, ycL_g, nixL, niyL, njxL, njyL, AiL, AjL, VolumeL, C);
 
   int coordMax[2]={1, 1};
@@ -91,9 +92,10 @@ int main(int argc, char *argv[]){
   //cout << " setting bc " << endl;
   if(rank == 0)
     cout << " Setting BC " << endl;
- 
+
   mpiSetBc(U, nixL, niyL, njxL, njyL, com2d,  C);
 
+ 
   MPI_Barrier(com2d);
 
   //outputArrayMap(outputFolder, "UL", U, rank);
@@ -112,6 +114,10 @@ int main(int argc, char *argv[]){
   outputArrayMap(outputFolder, "UL", U, rank);
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
 
+
+  clock_t t;
+  float avgT[6];
+
   if(rank == 0)
     cout << " Entering Time Loop " << endl;
 
@@ -119,20 +125,42 @@ int main(int argc, char *argv[]){
   {
     for (int k = 0; k < RKORDER; k++)
     {
+      t = clock();
       mpiSetBc(U, nixL, niyL, njxL, njyL, com2d,  C);
+      t = clock()-t;
+      avgT[0] =  ((float)t)/CLOCKS_PER_SEC;
 
       MPI_Barrier(com2d);
 
+      t = clock();
       computeSourceTerm(S, U_RK, xcL, ycL, C);
+      t = clock()-t;
+      avgT[1] =  ((float)t)/CLOCKS_PER_SEC;
 
+      t = clock();
       MUSCL(U_L, U_R, U_B, U_T, U_RK, C);
+      t = clock()-t;
+      avgT[2] =  ((float)t)/CLOCKS_PER_SEC;
 
+      t = clock();
       compute2dFlux(F, G, U_L, U_R, U_B, U_T, njxL, njyL, nixL, niyL, C);
+      t = clock()-t;
+      avgT[3] =  ((float)t)/CLOCKS_PER_SEC;
 
+      t = clock();
       computeRes(Res, S, F, G, AjL, AiL, VolumeL, C);
+      t = clock()-t;
+      avgT[4] =  ((float)t)/CLOCKS_PER_SEC;
 
+      t = clock();
       rungeKutta(U_RK, U, Res, VolumeL, k, dt, C);
+      t = clock()-t;
+      avgT[5] =  ((float)t)/CLOCKS_PER_SEC;
     }
+  
+    if (rank==0)
+      printf("setBc=%lf, srcTerm=%lf, muscl=%lf, 2dflux=%lf, res=%lf, rk=%lf\n", avgT[0],avgT[1],avgT[2],avgT[3],avgT[4],avgT[5]);
+ 
 
     U=U_RK;
 

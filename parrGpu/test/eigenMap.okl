@@ -1,0 +1,12 @@
+#include "occa.hpp"
+@kernel void fillEigenMap(map2Eigen* Q){
+
+
+  for(int j=0; j < Q->Q.rows();j++)
+    for(int i=0; i < Q->Q.cols();i++)
+    {
+      Q->Q(j,i) = j*Q->Q.cols()+i;
+  
+    }
+
+}

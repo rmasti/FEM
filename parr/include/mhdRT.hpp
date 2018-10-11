@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <time.h>
 
 #include "stdio.h"
 #include "mpi.h"
