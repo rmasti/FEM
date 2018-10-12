@@ -20,7 +20,7 @@ int main(int argc, char *argv[]){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  string mesh = "../mesh/debugMatlab.msh";
+  string mesh = "../mesh/360x300.msh"; //debugMatlab.msh";
   string outputFolder = "./output/";
   //string outputFolder = "/mnt/c/Users/rlm78/Downloads/FEM/";
 
@@ -43,8 +43,8 @@ int main(int argc, char *argv[]){
   int coordMax[2]={1, 1};
   MPI_Cart_coords(com2d, rank, 2, coordMax);
 
-  MPI_Allreduce(&coordMax[0], &coordMax[0], 1, MPI_INT, MPI_MAX, com2d);
-  MPI_Allreduce(&coordMax[1], &coordMax[1], 1, MPI_INT, MPI_MAX, com2d);
+  MPI_Allreduce(MPI_IN_PLACE, &coordMax[0], 1, MPI_INT, MPI_MAX, com2d);
+  MPI_Allreduce(MPI_IN_PLACE, &coordMax[1], 1, MPI_INT, MPI_MAX, com2d);
 
   MPI_Comm_rank(com2d, &rank);
 
@@ -103,7 +103,7 @@ int main(int argc, char *argv[]){
   outputArray(outputFolder, "xcL_g", xcL_g, rank+size);
 
   dt = computeTimeStepU(VolumeL, AiL, AjL, nixL, niyL, njxL, njyL, U, C);
-  MPI_Allreduce(&dt, &dt, 1, MPI_DOUBLE, MPI_MIN, com2d);
+  MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, com2d);
 
   int n=0;
 
@@ -121,7 +121,7 @@ int main(int argc, char *argv[]){
   if(rank == 0)
     cout << " Entering Time Loop " << endl;
 
-  while(time(0, n) < tend )//&& n < 400)
+  while(time(0, n) < tend  && n < 1)
   {
     for (int k = 0; k < RKORDER; k++)
     {
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]){
     else
     {
       dt = computeTimeStepU(VolumeL, AiL, AjL, nixL, niyL, njxL, njyL, U, C);
-      MPI_Allreduce(&dt, &dt, 1, MPI_DOUBLE, MPI_MIN, com2d);
+      MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, com2d);
     }
 
     time(0,n+1) = time(0,n) + dt;

@@ -1,25 +1,31 @@
+ifndef OCCA_DIR
+ERROR:
+	@echo "Error, envirnoment variable [OCCA_DIR] is not set"
+endif
+
+include ${OCCA_DIR}/scripts/Makefile
+
 # define variables
 VPATH   = ./
-HDRDIR  = ./include  ../eigen ../occa/include
-LIBDIR	= ./lib  ../eigen ../occa/src
+HDRDIR  = ./include  ../eigen ${OCCA_DIR}/include
+LIBDIR	= ./lib  ../eigen ${OCCA_DIR}/lib
 # adjust this for your system
 
 # set options for this machine
 # specify which compilers to use for c, fortran and linking
 #CC	= g++
 #LD	= g++
-
 CC = mpic++
 LD = mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = $(addprefix -I, $(HDRDIR)) -O3 -std=c++0x -g3
+CFLAGS = $(addprefix -I, $(HDRDIR)) -O3 -std=c++0x -g3 -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(paths)
 #-fno-exceptions
 # link flags to be used 
-LDFLAGS	= $(addprefix -I, $(HDRDIR)) -L. $(addprefix -L, $(LIBDIR)) -O3
+LDFLAGS	= $(addprefix -I, $(HDRDIR)) -L. $(addprefix -L, $(LIBDIR)) -O3 -DOCCA_VERSION_1_0
 
 # libraries to be linked in
-LIBS = -lm 
+LIBS = -L ${OCCA_DIR}/lib $(links) -lm  -locca
 
 # types of files we are going to construct rules for
 .SUFFIXES: .cpp 
@@ -58,6 +64,10 @@ MPICARTTEST = \
 	src/mhdRT_f.o
 	#src/fp_f.o\
 
+OCCAADDVECTEST = \
+	test/occaAddVector.o
+	#src/fp_f.o\
+
 
 
 main:$(OBJS) 
@@ -79,6 +89,10 @@ mpitest:$(MPITEST)
 mpicarttest:$(MPICARTTEST)
 	$(LD)  $(LDFLAGS) -o main $(MPICARTTEST) $(LIBS)
 	rm -r $(MPICARTTEST)
+
+occaaddvectest:$(OCCAADDVECTEST)
+	$(LD)  $(LDFLAGS) -o main $(OCCAADDVECTEST) $(LIBS)
+	#rm -r $(OCCAADDVECTEST)
 
 
 # what to do if user types "make clean"

@@ -4,8 +4,8 @@
 clc, clear, close all
 
 
-ny = 800;
-nx = 960;
+ny = 300;
+nx = 360;
 
 % r and theta coordinates
 
@@ -29,7 +29,7 @@ ylin=reshape(y,[],1);
 
 plot(xlin,ylin,'r');
 
-fileID=fopen('debugMatlab.msh','w');
+fileID=fopen('360x300.msh','w');
 
 fprintf(fileID, '%i\n',(nx+1)*(ny+1));
 fprintf(fileID, '%i\n',nx+1);
