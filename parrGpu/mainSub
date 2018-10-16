@@ -1,0 +1,31 @@
+#!/bin/bash
+#PBS -l walltime=00:01:00
+#PBS -l gpus=1
+#PBS -W group_list=newriver
+#PBS -q p100_dev_q
+#PBS -A MATH5414
+#Change to the directory from which the job was submitted
+cd $PBS_O_WORKDIR
+#Load modules
+module purge
+module load gcc #/5.2.0 
+module load mvapich2 #/2.2 
+module load cuda/8.0.61
+
+export OCCA_DIR="/home/rlm7819/FEM/occa"
+export LD_LIBRARY_PATH+=":$OCCA_DIR/lib"
+export PATH+=":$OCCA_DIR/bin"
+
+cd $PBS_O_WORKDIR
+make clean
+make occaaddvectest
+
+./main
+
+#occa info
+
+#make clean
+#make occaaddvectest
+#./main 
+
+exit;
