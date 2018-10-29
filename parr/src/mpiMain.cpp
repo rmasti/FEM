@@ -8,7 +8,7 @@ int main(int argc, char *argv[]){
   C.num_ghost = 3;
   C.cfl = 0.45;
   C.nmax = 10000;
-  C.wint = 500;
+  C.wint = 1;
   C.pint = 10;
   double A = (2-1)/(1.0+2.0);
   double tend = 6.0/sqrt(A*ACCEL*2);
@@ -21,6 +21,7 @@ int main(int argc, char *argv[]){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   string mesh = "../mesh/360x300.msh"; //debugMatlab.msh";
+  //string mesh = "../mesh/16x10.msh"; //debugMatlab.msh";
   string outputFolder = "./output/";
   //string outputFolder = "/mnt/c/Users/rlm78/Downloads/FEM/";
 
@@ -107,21 +108,17 @@ int main(int argc, char *argv[]){
 
   int n=0;
 
-  //cout << "Before stitch" << endl;
-
   MPI_Barrier(com2d);
 
   outputArrayMap(outputFolder, "UL", U, rank);
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
 
-
   clock_t t;
   float avgT[6];
-
   if(rank == 0)
     cout << " Entering Time Loop " << endl;
 
-  while(time(0, n) < tend  && n < 1)
+  while(time(0, n) < tend && n < 60)
   {
     for (int k = 0; k < RKORDER; k++)
     {
@@ -158,14 +155,8 @@ int main(int argc, char *argv[]){
       avgT[5] =  ((float)t)/CLOCKS_PER_SEC;
     }
   
-    if (rank==0)
-      printf("setBc=%lf, srcTerm=%lf, muscl=%lf, 2dflux=%lf, res=%lf, rk=%lf\n", avgT[0],avgT[1],avgT[2],avgT[3],avgT[4],avgT[5]);
- 
-
     U=U_RK;
 
-
-    //cout<< " Made Through RK LOOP" << endl;
     if(time(0,n)+dt > tend)// end at exact time
       dt = tend-time(0,n);
     else
@@ -181,8 +172,10 @@ int main(int argc, char *argv[]){
     MPI_Comm_rank(com2d, &rank);
       
     if(n%C.pint == 0)
-      if (rank == 0)
+      if (rank == 0){
         cout << "time  = " << time(0,n) << ", n = " << n << endl;
+        printf("setBc=%lf, srcTerm=%lf, muscl=%lf, 2dflux=%lf, res=%lf, rk=%lf\n", avgT[0],avgT[1],avgT[2],avgT[3],avgT[4],avgT[5]);
+      }
 
     if(n%C.wint == 0) // Write to file by rank 0 gather and output
     {
@@ -190,6 +183,11 @@ int main(int argc, char *argv[]){
         cout << " Write To File..." << endl;
 
       stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
+      outputArray(outputFolder, "xcLg", xcL, rank+n);
+      outputArray(outputFolder, "ycLg", ycL, rank+n);
+      outputArrayMap(outputFolder, "UL", U, rank+n);
+
+
     }
   }
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);

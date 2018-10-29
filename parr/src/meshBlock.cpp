@@ -79,6 +79,7 @@ MPI_Comm meshBlock(
     // fill matrices
     computeArea(Ai, Aj, xn, yn); 
     computeNormalVectors(nix, niy, njx, njy, xn, yn, Ai, Aj); 
+
     computeVolume(Volume, xn, yn);
 
     // output for plotting purposes

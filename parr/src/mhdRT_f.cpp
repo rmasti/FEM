@@ -951,11 +951,14 @@ void initialize(
   double p0 = 2.5;
   double g = ACCEL;//0.5;
 
-  double vPert = 0.0;
+  double A = (2-1)/(1.0+2.0);
+  double tend = 6.0/sqrt(A*g*2);
+
+  double vPert = 0.05*g*tend;
   double rmidd= 0.375;
   double circ = 2.0*PI*rmidd;
   double Bx = 0.0125;//125;
-  double lambda = circ/20;
+  double lambdaM = circ/20;
   double randPert;
 
   for (int j = 0; j < nj; j++)
@@ -968,9 +971,8 @@ void initialize(
       r = sqrt(x*x+y*y);
       thet = atan2(y,x);
 
-
       randPert = ((double) rand() / (RAND_MAX));
-      if (r > rmidd*(1.0+0.02*randPert))//cos(1*abs(randPert)*thet/PI + randPert*PI)))
+      if (r > rmidd)//cos(1*abs(randPert)*thet/PI + randPert*PI)))
       {
         V->Q[rhoid](j,i) = rhoH;
       }
@@ -979,13 +981,11 @@ void initialize(
         V->Q[rhoid](j,i) = rhoL;
       }
 
-
-      vPert =vPert;
       double decay =exp(-20.0*(r-rmidd)*(r-rmidd)/(0.25*rmidd*rmidd));
-      double thetVar = randPert*(2.0*PI/lambda)*thet+randPert*PI;
+      double thetVar = randPert*(2.0*PI/lambdaM)*thet+randPert*PI;
 
-      V->Q[uid](j,i) = vPert*decay;
-      V->Q[vid](j,i) = vPert*decay;
+      V->Q[uid](j,i) = vPert*decay*sin(2.0*PI*rmidd*thet/lambdaM);
+      V->Q[vid](j,i) = vPert*decay*cos(2.0*PI*rmidd*thet/lambdaM);
       V->Q[wid](j,i) = 0.0; 
       V->Q[pid](j,i) = p0 - V->Q[rhoid](j,i)*g*(r-rmidd);
       V->Q[bxid](j,i) = Bx*sin(thet); 
@@ -1025,7 +1025,7 @@ void outputArray(
     // This function will output any eigen matrix into a file
     string Address,        // input - folder location
     string FileName,       // input - File
-    RowMajorMatrixXd& out,         //input - matrix
+    const RowMajorMatrixXd& out,         //input - matrix
     int n                  //input - iteration
     )
 {
@@ -1042,7 +1042,8 @@ void outputArray(
   // where lines end and start
   //IOFormat CleanFmt(14,0,", ", "\n", "[", "]");
   IOFormat CleanFmt(14);
-  outfile << out.colwise().reverse().format(CleanFmt) << endl; // output trans
+  //outfile << out.colwise().reverse().format(CleanFmt) << endl; // output trans
+  outfile << out.format(CleanFmt) << endl; // output trans
   //outfile << setprecision(14) << out << endl; // output trans
 }
 

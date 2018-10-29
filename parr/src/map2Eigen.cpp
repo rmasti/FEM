@@ -21,7 +21,7 @@ Map2Eigen :: Map2Eigen(int nj, int ni, int nequ):
 
 
 
-void stitchMap2EigenWrite(string Address, string FileName, Map2Eigen* IN, const int n, const int *coord, MPI_Comm &com2d, constants C)
+void stitchMap2EigenWrite(string Address, string FileName,const Map2Eigen* IN, const int n, const int *coord, MPI_Comm &com2d, constants C)
 {
   int njc_g = IN->Q[rhoid].rows(); // get interiors
   int nic_g = IN->Q[rhoid].cols(); // get interiors
@@ -78,6 +78,7 @@ void stitchMap2EigenWrite(string Address, string FileName, Map2Eigen* IN, const 
   }
   delete temp->Q_raw; temp->Q_raw = NULL;
 
+  MPI_Barrier(com2d);
 }
 
 
