@@ -189,6 +189,7 @@ void mpiSetBc(
         tempTout->Q[eq].row(j) = U->Q[eq].row(jco+sign*j);
 
     MPI_Isend(tempTout->Q_raw, sendSize, MPI_DOUBLE, out, tag, com2d, &requestOut[3]); //tag333bot
+
   }
 
   /////////////////////// RECEIVE DATA ///////////////////////  
@@ -208,8 +209,8 @@ void mpiSetBc(
   // recv from right
   Map2Eigen *tempRin  = new Map2Eigen(njc , C.num_ghost, NEQ);
   sendSize = njc*C.num_ghost*NEQ;
-  tag = 222;
   in = r;
+  tag = 222;
   ic =(nic-C.num_ghost)-1; // first cell layer on right 
   sign = -1;
   MPI_Irecv(tempRin->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn);
@@ -223,10 +224,10 @@ void mpiSetBc(
   {
     Map2Eigen *tempBin  = new Map2Eigen(C.num_ghost, nic, NEQ);
     sendSize = C.num_ghost*nic*NEQ;
-    sign = +1;
-    jco = C.num_ghost; // bott inter offset
     in = d;
     tag = 333;
+    jco = C.num_ghost; // bott inter offset
+    sign = +1;
     MPI_Irecv(tempBin->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn); //tag444top
     MPI_Wait(&requestIn, &status);
     for(int j = 0; j < C.num_ghost; j++)
@@ -239,10 +240,10 @@ void mpiSetBc(
   {
     Map2Eigen *tempTin  = new Map2Eigen(C.num_ghost, nic, NEQ);
     sendSize = C.num_ghost*nic*NEQ;
-    sign = -1;
-    jco = njc - C.num_ghost - 1; // top inter offset
     in = u;
     tag = 444; // data coming in from top
+    jco = njc - C.num_ghost - 1; // top inter offset
+    sign = -1;
     MPI_Irecv(tempTin->Q_raw, sendSize, MPI_DOUBLE, in, tag, com2d, &requestIn); //tag444top
     MPI_Wait(&requestIn, &status);
 
@@ -254,10 +255,13 @@ void mpiSetBc(
 
   delete[] tempTin->Q_raw; tempTin->Q_raw = NULL;
   delete[] tempTout->Q_raw; tempTout->Q_raw = NULL;
-  delete[] tempLout->Q_raw; tempLout->Q_raw = NULL;
-  delete[] tempRout->Q_raw; tempRout->Q_raw = NULL;
+
   delete[] tempLin->Q_raw; tempLin->Q_raw = NULL;
+  delete[] tempLout->Q_raw; tempLout->Q_raw = NULL;
+
   delete[] tempRin->Q_raw; tempRin->Q_raw = NULL;
+  delete[] tempRout->Q_raw; tempRout->Q_raw = NULL;
+
   delete[] tempBin->Q_raw; tempBin->Q_raw = NULL;
   delete[] tempBout->Q_raw; tempBout->Q_raw = NULL;
 }

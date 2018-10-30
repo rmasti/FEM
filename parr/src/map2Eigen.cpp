@@ -18,9 +18,6 @@ Map2Eigen :: Map2Eigen(int nj, int ni, int nequ):
 
 }
 
-
-
-
 void stitchMap2EigenWrite(string Address, string FileName,const Map2Eigen* IN, const int n, const int *coord, MPI_Comm &com2d, constants C)
 {
   int njc_g = IN->Q[rhoid].rows(); // get interiors
@@ -64,7 +61,7 @@ void stitchMap2EigenWrite(string Address, string FileName,const Map2Eigen* IN, c
         if(i == 0 && j == 0)// your bottom left fill as such
         {
           for(int eq = 0; eq < NEQ; eq++)
-            out->Q[eq].block(0,0, njc, nic) = IN->Q[eq].block(C.num_ghost, C.num_ghost, njc, nic);
+             out->Q[eq].block(njc*j,nic*i, njc, nic) = IN->Q[eq].block(C.num_ghost, C.num_ghost, njc, nic);
         }
         else
         {

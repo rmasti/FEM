@@ -8,7 +8,7 @@ int main(int argc, char *argv[]){
   C.num_ghost = 3;
   C.cfl = 0.45;
   C.nmax = 10000;
-  C.wint = 1;
+  C.wint = 100;
   C.pint = 10;
   double A = (2-1)/(1.0+2.0);
   double tend = 6.0/sqrt(A*ACCEL*2);
@@ -59,6 +59,7 @@ int main(int argc, char *argv[]){
 
   int njc = VolumeL.rows();
   int nic = VolumeL.cols();
+
   Map2Eigen *S    = new Map2Eigen(njc, nic, NEQ);
   Map2Eigen *Res  = new Map2Eigen(njc, nic, NEQ);
   //Direction dependent
@@ -118,7 +119,7 @@ int main(int argc, char *argv[]){
   if(rank == 0)
     cout << " Entering Time Loop " << endl;
 
-  while(time(0, n) < tend && n < 60)
+  while(time(0, n) < tend )//&& n < 60)
   {
     for (int k = 0; k < RKORDER; k++)
     {
@@ -168,9 +169,6 @@ int main(int argc, char *argv[]){
     time(0,n+1) = time(0,n) + dt;
     n++;
 
-
-    MPI_Comm_rank(com2d, &rank);
-      
     if(n%C.pint == 0)
       if (rank == 0){
         cout << "time  = " << time(0,n) << ", n = " << n << endl;
@@ -179,15 +177,14 @@ int main(int argc, char *argv[]){
 
     if(n%C.wint == 0) // Write to file by rank 0 gather and output
     {
-      if(rank == 0)
+      if(rank == 0){
         cout << " Write To File..." << endl;
+      }
 
       stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
       outputArray(outputFolder, "xcLg", xcL, rank+n);
       outputArray(outputFolder, "ycLg", ycL, rank+n);
       outputArrayMap(outputFolder, "UL", U, rank+n);
-
-
     }
   }
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
