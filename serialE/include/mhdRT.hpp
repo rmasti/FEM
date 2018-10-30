@@ -36,7 +36,7 @@ using namespace Eigen;
 #define MU0 1.0
 #define PI 3.14159265359
 #define NEQ 8
-#define ACCEL 1.0
+#define ACCEL 0.1
 #define DEBUG false
 
 // DEFINE ELEMENT IDENTIFIERS

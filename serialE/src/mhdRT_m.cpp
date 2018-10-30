@@ -21,9 +21,9 @@ int main (int argc, char * argv[])
   double A = (2-1)/(1.0+2.0);
   double tend = 6.0/sqrt(A*ACCEL*2);
 
-  //string outputFolder =  "./output/";
-  string outputFolder =  "/mnt/c/Users/rlm78/Desktop/matlabstuff/";
-  string mesh = "../mesh/debugMatlab.msh";
+  string outputFolder =  "./output/";
+  //string outputFolder =  "/mnt/c/Users/rlm78/Desktop/matlabstuff/";
+  string mesh = "../mesh/360x300.msh";
 
   ///////////////// READ IN THE MESH ///////////////////
   MatrixXd xn, yn; // coord for the nodal points of cell
@@ -160,7 +160,6 @@ int main (int argc, char * argv[])
     if(n%C.wint == 0)
     {
       outputArrayMap(outputFolder, "U", U, n);
-
       outputArrayMap(outputFolder, "F", F, n);
       outputArrayMap(outputFolder, "G", G, n);
       outputArrayMap(outputFolder, "S", S, n);

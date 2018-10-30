@@ -941,7 +941,66 @@ void initialize(
     constants C            // input - constants for case number
     )
 {
+  int ni = xc_g.cols(); // n cells in i dir
+  int nj = xc_g.rows();  // n cells in j dir
+  // check for the same sizes
+  if (V->Q[rhoid].cols() != ni || V->Q[rhoid].rows() != nj)
+  {
+    cerr << "ERROR: Dimension Mismatch in Initialization?!?!" << endl;
+    exit(1);
+  }
+  // create important constants specified from papers
+  double x, y, r, thet;
+  double rhoL = 1.0;
+  double rhoH = 2.0;
 
+  double p0 = 2.5;
+  double g = ACCEL;//0.5;
+
+  double A = (2-1)/(1.0+2.0);
+  double tend = 6.0/sqrt(A*g*2);
+
+  double vPert = 0.05*g*tend;
+  double rmidd= 0.375;
+  double circ = 2.0*PI*rmidd;
+  double Bx = 0.0125;//125;
+  double lambdaM = circ/20;
+  double randPert;
+
+  for (int j = 0; j < nj; j++)
+  {
+    for (int i = 0; i < ni; i++)
+    {
+      x = xc_g(j, i);
+      y = yc_g(j, i);
+
+      r = sqrt(x*x+y*y);
+      thet = atan2(y,x);
+
+      randPert = ((double) rand() / (RAND_MAX));
+      if (r > rmidd)//cos(1*abs(randPert)*thet/PI + randPert*PI)))
+      {
+        V->Q[rhoid](j,i) = rhoH;
+      }
+      else
+      {
+        V->Q[rhoid](j,i) = rhoL;
+      }
+
+      double decay =exp(-20.0*(r-rmidd)*(r-rmidd)/(0.25*rmidd*rmidd));
+      double thetVar = randPert*(2.0*PI/lambdaM)*thet+randPert*PI;
+
+      V->Q[uid](j,i) = vPert*decay*sin(2.0*PI*rmidd*thet/lambdaM);
+      V->Q[vid](j,i) = vPert*decay*cos(2.0*PI*rmidd*thet/lambdaM);
+      V->Q[wid](j,i) = 0.0; 
+      V->Q[pid](j,i) = p0 - V->Q[rhoid](j,i)*g*(r-rmidd);
+      V->Q[bxid](j,i) = Bx*sin(thet); 
+      V->Q[byid](j,i) = -1*Bx*cos(thet); 
+      V->Q[bzid](j,i) = 0.0; 
+    }
+  }
+
+/*
   int ni = xc_g.cols(); // n cells in i dir
   int nj = xc_g.rows();  // n cells in j dir
   // check for the same sizes
@@ -1000,6 +1059,7 @@ void initialize(
       V->Q[bzid](j,i) = 0.0; 
     }
   }
+  */
 }
 
 
