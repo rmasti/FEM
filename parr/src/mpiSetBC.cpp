@@ -220,7 +220,7 @@ void mpiSetBc(
       U->Q[eq].col(ic+1-sign*i) = tempRin->Q[eq].col(i); // fill in data on right
   /////////////////////////////////////
   // recv bott dat
-  if (d > 0)
+  if (d >= 0)
   {
     Map2Eigen *tempBin  = new Map2Eigen(C.num_ghost, nic, NEQ);
     sendSize = C.num_ghost*nic*NEQ;
@@ -236,7 +236,7 @@ void mpiSetBc(
   }
   /////////////////////////////////////
   // recv top data
-  if(u > 0)
+  if(u >= 0)
   {
     Map2Eigen *tempTin  = new Map2Eigen(C.num_ghost, nic, NEQ);
     sendSize = C.num_ghost*nic*NEQ;
