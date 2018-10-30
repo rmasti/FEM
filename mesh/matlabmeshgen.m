@@ -4,8 +4,8 @@
 clc, clear, close all
 
 
-ny = 300;
-nx = 360;
+ny = 10;
+nx = 16;
 
 % r and theta coordinates
 
@@ -29,7 +29,7 @@ ylin=reshape(y,[],1);
 
 plot(xlin,ylin,'r');
 
-fileID=fopen('360x300.msh','w');
+fileID=fopen('16x10.msh','w');
 
 fprintf(fileID, '%i\n',(nx+1)*(ny+1));
 fprintf(fileID, '%i\n',nx+1);
