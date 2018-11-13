@@ -1,0 +1,12 @@
+@kernel void occaMap2Eigen(const int nrows,
+        const int ncols, 
+        double *o_U){
+
+    int NEQ = 8;
+        for(int j = 0; j < nrows; j++; @inner(0)){
+            //for(int eq = 0; eq < NEQ; eq++; @inner(1)){
+                o_U[(i*nrows+j)*NEQ+0] = 1;
+            //}
+        }
+    }
+}

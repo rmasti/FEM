@@ -68,6 +68,12 @@ OCCAADDVECTEST = \
 	test/occaAddVector.o
 	#src/fp_f.o\
 
+OCCAMAP2EIGEN = \
+	test/occaMap2Eigen.o\
+	src/mhdRT_f.o\
+	src/map2Eigen.o
+	#src/fp_f.o\
+
 
 
 main:$(OBJS) 
@@ -93,6 +99,10 @@ mpicarttest:$(MPICARTTEST)
 occaaddvectest:$(OCCAADDVECTEST)
 	$(LD)  $(LDFLAGS) -o main $(OCCAADDVECTEST) $(LIBS)
 	#rm -r $(OCCAADDVECTEST)
+
+occamap2eigen:$(OCCAMAP2EIGEN)
+	$(LD)  $(LDFLAGS) -o main $(OCCAMAP2EIGEN) $(LIBS)
+	#rm -r $(OCCAMAP2EIGEN)
 
 
 # what to do if user types "make clean"
