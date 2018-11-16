@@ -3,57 +3,33 @@
 
 int main(int argc, char * argv[])
 {
-  MPI_Init(& argc, &argv);
 
-
-  int rank; int size;
-
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size); 
-
-  int ni = 3, nj = 5;
-  cout << size << " " << rank << endl;
-
-  if(rank == 0)
-  {
+    int NEQ = 8;
+    int ni = 3, nj = 5;
     Map2Eigen *Var = new Map2Eigen(ni, nj, NEQ);
+    occa::setDevice("mode: 'CUDA', "
+            "device_id : 0");
+
 
     for (int i = 0; i < ni*nj*NEQ; i++)
-      Var->Q_raw[i] = i;
+        Var->Q_raw[i] = i;
 
     Var->Q[rhoid](0,0) = 100;
 
+    occa::setDevice("mode: 'CUDA', "
+    occa::setDevice("mode: 'CUDA', "
+            "device_id : 0");
+            "device_id : 0");
+    double *mappoint = (double*) occa::umalloc(ni*nj*NEQ * sizeof(MatrixXd));
+    mappoint = Var->Q_raw;
 
-    int dest = 1;
-    int tag = 666;
-    cout << "Sending from rank 0 process to rank 1 this array:" << endl;
-    cout << Var->Q[0] << endl;
-    double a[3] = {1.2, 3.4, 5.6};
-    MPI_Send(Var->Q_raw, ni*nj*NEQ, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
-    //MPI_Send(a, 3, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
-  }
+    occa::kernel eigenMap = occa::buildKernel("test/eigenMap.okl", "fillEigenMap");
 
-  if(rank == 1)
-  {
-    int tag = 666;
+    eigenMap(Var);
 
-    Map2Eigen *VarIn = new Map2Eigen(ni, nj, NEQ);
+    occa::finish();
 
-    int source = 0;
-    MPI_Status status;
+    cout << Var->Q[rhoid] << endl;
 
-    MPI_Recv(VarIn->Q_raw, ni*nj*NEQ, MPI_DOUBLE, source, tag, MPI_COMM_WORLD, &status);
-   
-    //double aIn[3];
-    //MPI_Recv(aIn, 3, MPI_DOUBLE, source, tag, MPI_COMM_WORLD, &status);
-
-    cout << "Received this array from rank 0:" << endl;
-    cout << VarIn->Q[0] << endl;
-
-  }
-
-  MPI_Finalize();
-
-  return 0;
-
+    return 0;
 }

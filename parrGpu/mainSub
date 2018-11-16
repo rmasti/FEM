@@ -17,12 +17,16 @@ export LD_LIBRARY_PATH+=":$OCCA_DIR/lib"
 export PATH+=":$OCCA_DIR/bin"
 
 cd $PBS_O_WORKDIR
+
+
 make clean
-make occaaddvectest
+make occamap2eigen
+nvcc -c main
+./main 
 
-./main
+#./main 
+#mpiexec -np 2 main
 
-#occa info
 
 #make clean
 #make occaaddvectest

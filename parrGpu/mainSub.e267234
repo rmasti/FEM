@@ -1,0 +1,59 @@
+rm: cannot remove 'src/mpiMain.o': No such file or directory
+rm: cannot remove 'src/meshBlock.o': No such file or directory
+rm: cannot remove 'src/mpiSetBC.o': No such file or directory
+make: *** [clean] Error 1
+nvcc warning : The 'compute_20', 'sm_20', and 'sm_21' architectures are deprecated, and may be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+nvcc fatal   : Don't know what to do with 'main'
+terminate called after throwing an instance of 'occa::exception'
+  what():  
+---[ Error ]--------------------------------------------------------------------
+    File     : /home/rlm7819/FEM/occa/src/mode/cuda/memory.cpp
+    Line     : 147
+    Function : copyTo
+    Message  : Memory: Copy From
+    Error   : CUDA Error [ 1 ]: CUDA_ERROR_INVALID_VALUE
+    Stack    :
+      7 occa::error(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+      6 occa::cuda::error(cudaError_enum, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+      5 occa::cuda::memory::copyTo(void*, unsigned long, unsigned long, occa::properties const&) const
+      4 occa::memory::copyTo(void*, long, long, occa::properties const&) const
+      3 ./main()
+      2 /lib64/libc.so.6(__libc_start_main+0xf5)
+      1 ./main()
+================================================================================
+
+/opt/torque/torque/spool/mom_priv/jobs/267234.master.cluster.SC: line 25: 177558 Aborted                 ./main
+
+Usage:
+ kill [options] <pid|name> [...]
+
+Options:
+ -a, --all              do not restrict the name-to-pid conversion to processes
+                        with the same uid as the present process
+ -s, --signal <sig>     send specified signal
+ -q, --queue <sig>      use sigqueue(2) rather than kill(2)
+ -p, --pid              print pids without signaling them
+ -l, --list [=<signal>] list signal names, or convert one to a name
+ -L, --table            list signal names and numbers
+
+ -h, --help     display this help and exit
+ -V, --version  output version information and exit
+
+For more details see kill(1).
+
+Usage:
+ kill [options] <pid|name> [...]
+
+Options:
+ -a, --all              do not restrict the name-to-pid conversion to processes
+                        with the same uid as the present process
+ -s, --signal <sig>     send specified signal
+ -q, --queue <sig>      use sigqueue(2) rather than kill(2)
+ -p, --pid              print pids without signaling them
+ -l, --list [=<signal>] list signal names, or convert one to a name
+ -L, --table            list signal names and numbers
+
+ -h, --help     display this help and exit
+ -V, --version  output version information and exit
+
+For more details see kill(1).
