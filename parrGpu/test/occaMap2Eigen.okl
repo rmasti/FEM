@@ -5,9 +5,7 @@
     //int NEQ = 8;
     for(int j = 0; j < nrows; j++; @outer(0)){
         for(int i = 0; i < ncols; i++; @inner(0)){
-            //for(int eq = 0; eq < NEQ; eq++; @inner(1)){
-            o_U[(i*nrows+j)*NEQ+0] = 1;
-            //}
+            o_U[(i*nrows+j)*NEQ+0] = double(1.2);
         }
     }
 }

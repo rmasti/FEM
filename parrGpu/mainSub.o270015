@@ -1,0 +1,8 @@
+rm -r src/mpiMain.o src/map2Eigen.o src/meshBlock.o src/mpiSetBC.o src/mhdRT_f.o
+mpic++ -I./include -I../eigen -I/home/rlm7819/FEM/occa/include -O3 -std=c++0x -g3 -DOCCA_VERSION_1_0 -O3 -D __extern_always_inline=inline -Wno-c++11-long-long  -fopenmp -I/home/rlm7819/FEM/occa/include   -I.//include -I/opt/apps/cuda/8.0.61/include -I/opt/apps/cuda/8.0.61/include -o src/mhdRT_f.o -c src/mhdRT_f.cpp
+mpic++ -I./include -I../eigen -I/home/rlm7819/FEM/occa/include -O3 -std=c++0x -g3 -DOCCA_VERSION_1_0 -O3 -D __extern_always_inline=inline -Wno-c++11-long-long  -fopenmp -I/home/rlm7819/FEM/occa/include   -I.//include -I/opt/apps/cuda/8.0.61/include -I/opt/apps/cuda/8.0.61/include -o src/map2Eigen.o -c src/map2Eigen.cpp
+mpic++  -I./include -I../eigen -I/home/rlm7819/FEM/occa/include -L. -L./lib -L../eigen -L/home/rlm7819/FEM/occa/lib -O3 -DOCCA_VERSION_1_0 -o main test/occaMap2Eigen.o src/mhdRT_f.o src/map2Eigen.o -L /home/rlm7819/FEM/occa/lib  -lm  -locca
+#rm -r test/occaMap2Eigen.o src/mhdRT_f.o src/map2Eigen.o
+  0   8  16  24  32
+ 40  48  56  64  72
+ 80  88  96 104 112

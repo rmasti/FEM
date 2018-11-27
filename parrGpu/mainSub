@@ -21,11 +21,8 @@ cd $PBS_O_WORKDIR
 
 make clean
 make occamap2eigen
-nvcc -c main
-./main 
-
-#./main 
-#mpiexec -np 2 main
+./main
+#nvcc -arch=sm_70 -ptx -I OCCA_DIR/include -x cu /home/rlm7819/.occa/ test/occamap2eigen.o -o 
 
 
 #make clean
