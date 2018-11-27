@@ -1,9 +1,0 @@
-rm -r src/mpiMain.o src/map2Eigen.o src/meshBlock.o src/mpiSetBC.o src/mhdRT_f.o
-mpic++ -I./include -I../eigen -I/home/rlm7819/FEM/occa/include -O3 -std=c++0x -g3 -DOCCA_VERSION_1_0 -O3 -D __extern_always_inline=inline -Wno-c++11-long-long  -fopenmp -I/home/rlm7819/FEM/occa/include   -I.//include -I/opt/apps/cuda/8.0.61/include -I/opt/apps/cuda/8.0.61/include -o test/occaAddVector.o -c test/occaAddVector.cpp
-mpic++  -I./include -I../eigen -I/home/rlm7819/FEM/occa/include -L. -L./lib -L../eigen -L/home/rlm7819/FEM/occa/lib -O3 -DOCCA_VERSION_1_0 -o main test/occaAddVector.o -L /home/rlm7819/FEM/occa/lib  -lm  -locca
-#rm -r test/occaAddVector.o
-0: 1
-1: 1
-2: 1
-3: 1
-4: 1

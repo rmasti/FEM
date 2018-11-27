@@ -92,6 +92,8 @@ int main(int argc, char *argv[]){
 
   // recv while you send
   //cout << " setting bc " << endl;
+   
+  
   if(rank == 0)
     cout << " Setting BC " << endl;
 
@@ -107,6 +109,27 @@ int main(int argc, char *argv[]){
   dt = computeTimeStepU(VolumeL, AiL, AjL, nixL, niyL, njxL, njyL, U, C);
   MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, com2d);
 
+
+  ////////// load on to device ////////// 
+  // Things needed to put on to device
+  // nixL, niyL 
+  // njxL, njyL
+  // AjL, AiL
+  // Volume L
+  // U, U_RK
+  // U_B, U_T, U_L, U_R, F, G
+  // S, RES, xcL, ycL
+  
+  // total bytes
+  
+  int bytes = njc_g*nic_g*NEQ*2; // U, U_RK
+  bytes += njc*(nic+1)*(NEQ*3+3); // U_B, U_T, G, nixL, niyL, AiL
+  bytes += (njc+1)*(nic)*(NEQ*3+3); // U_L, U_R, F, njxL, njyL, AjL
+  bytes += njc*nic*(3+NEQ*2); // vol, xcL, ycL, S, RES
+  bytes = bytes*8; 
+  
+  printf("total gb loaded onto gpu: tot = %lf\n", bytes*1.0e-9);
+ 
   int n=0;
 
   MPI_Barrier(com2d);
