@@ -15,11 +15,11 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <time.h>
 
 #include "stdio.h"
 #include "mpi.h"
 
-#include "occa.hpp"
 #include <Eigen/Dense>
 
 using namespace std;
@@ -37,7 +37,7 @@ using namespace Eigen;
 #define MU0 1.0
 #define PI 3.14159265359
 #define NEQ 8
-#define ACCEL 2.0
+#define ACCEL 0.1
 #define DEBUG false
 #define TRUE 1
 #define FALSE 0
@@ -95,7 +95,7 @@ void computeNormalVectors(RowMajorMatrixXd& nix, RowMajorMatrixXd& niy, RowMajor
 void computeVolume(RowMajorMatrixXd& Volume, const RowMajorMatrixXd& xn, const RowMajorMatrixXd& yn);
 
 
-void outputArray( string Address,  string FileName,  RowMajorMatrixXd& out,  int n);
+void outputArray( string Address,  string FileName,const RowMajorMatrixXd& out,  int n);
 
 void outputArrayMap(string Address, string FileName, const Map2Eigen* out, int n); 
 
@@ -163,5 +163,5 @@ void setBcRecv(Map2Eigen* U, MPI_Comm& com2d,  constants C);
 
 void computeCoord(int& l, int& r, int& d, int& u, MPI_Comm& com2d);
 
-void stitchMap2EigenWrite(string Address, string FileName, Map2Eigen* IN, const int n, const int* coord, MPI_Comm &com2d, constants C);
+void stitchMap2EigenWrite(string Address, string FileName,const Map2Eigen* IN, const int n, const int* coord, MPI_Comm &com2d, constants C);
 #endif

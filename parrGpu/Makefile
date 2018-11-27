@@ -37,11 +37,11 @@ LIBS = -L ${OCCA_DIR}/lib $(links) -lm  -locca
 # list of objects to be compiled
 
 OBJS = \
-       src/mpiMain.o\
-       src/map2Eigen.o\
-       src/meshBlock.o\
-       src/mpiSetBC.o\
-       src/mhdRT_f.o
+       src/occaMpiMain.o\
+       src/occaMap2Eigen.o\
+       src/occaMeshBlock.o\
+       src/occaMpiSetBC.o\
+       src/occaMhdRT_f.o
        #src/mhdRT_m.o\
 
 TESTS = \

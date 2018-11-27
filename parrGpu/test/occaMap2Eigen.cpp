@@ -6,6 +6,7 @@
 int main(int argc, const char **argv){
 
   occa::device device("mode: 'CUDA', device_id : 0");
+  //occa::device device("mode: 'Serial'");
 
   int nrows = 3;
   int ncols = 5;
