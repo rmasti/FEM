@@ -1,4 +1,4 @@
-#include "mhdRT.hpp"
+#include "occaMhdRT.hpp"
 #include "occa.hpp"
 
 //using namespace occa;

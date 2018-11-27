@@ -1,4 +1,4 @@
-#include "mhdRT.hpp"
+#include "occaMhdRT.hpp"
 
 int main(int argc, const char **argv){
 
