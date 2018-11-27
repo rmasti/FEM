@@ -113,7 +113,7 @@ void setBConU(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
     U->Q[rhoid].col(igl) = U->Q[rhoid].col(icr-i);
     //cout << U->Q[rhoid].col(icr-i) << endl;
     U->Q[wid].col(igl) = U->Q[wid].col(icr-i);
-    U->Q[pid].col(igl) = U->Q[pid].col(icr-i);
+    U->Q[piid].col(igl) = U->Q[piid].col(icr-i);
     U->Q[bzid].col(igl) = U->Q[bzid].col(icr-i);
 
     //direction flip
@@ -126,7 +126,7 @@ void setBConU(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
     //indepndent
     U->Q[rhoid].col(igr) = U->Q[rhoid].col(icl+i);
     U->Q[wid].col(igr) = U->Q[wid].col(icl+i);
-    U->Q[pid].col(igr) = U->Q[pid].col(icl+i);
+    U->Q[piid].col(igr) = U->Q[piid].col(icl+i);
     U->Q[bzid].col(igr) = U->Q[bzid].col(icl+i);
 
     //direction flip
@@ -176,7 +176,7 @@ void setBConU(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
       // extrapolate
       U->Q[rhoid](jgb,i) = 2.0*U->Q[rhoid](jgb+1,i) - U->Q[rhoid](jgb+2,i);
       U->Q[wid](jgb,i) = 2.0*U->Q[wid](jgb+1,i) - U->Q[wid](jgb+2,i);
-      U->Q[pid](jgb,i) = 2.0*U->Q[pid](jgb+1,i) - U->Q[pid](jgb+2,i);
+      U->Q[piid](jgb,i) = 2.0*U->Q[piid](jgb+1,i) - U->Q[piid](jgb+2,i);
       U->Q[bzid](jgb,i) = 2.0*U->Q[bzid](jgb+1,i) - U->Q[bzid](jgb+2,i);
 
       // horizontal boundary upper
@@ -196,7 +196,7 @@ void setBConU(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd&
       // extrapolate
       U->Q[rhoid](jgt,i) = 2.0*U->Q[rhoid](jgt-1,i) - U->Q[rhoid](jgt-2,i);
       U->Q[wid](jgt,i) = 2.0*U->Q[wid](jgt-1,i) - U->Q[wid](jgt-2,i);
-      U->Q[pid](jgt,i) = 2.0*U->Q[pid](jgt-1,i) - U->Q[pid](jgt-2,i);
+      U->Q[piid](jgt,i) = 2.0*U->Q[piid](jgt-1,i) - U->Q[piid](jgt-2,i);
       U->Q[bzid](jgt,i) = 2.0*U->Q[bzid](jgt-1,i) - U->Q[bzid](jgt-2,i);
 
     }
@@ -288,7 +288,7 @@ void computeSourceTerm(Map2Eigen* S, Map2Eigen* U, const RowMajorMatrixXd& xc, c
       thet = atan2(yc(j,i), xc(j,i));
       S->Q[uid](j,i) = -1*(U->Q[rhoid](jg,ig))*(g)*cos(thet);
       S->Q[vid](j,i) = -1*(U->Q[rhoid](jg,ig))*(g)*sin(thet);
-      S->Q[pid](j,i) = ((S->Q[uid](j,i)*-1*g*cos(thet)) + (S->Q[vid](j,i)*-1*g*sin(thet)));//U->Q[rhoid](jg,ig) ;
+      S->Q[piid](j,i) = ((S->Q[uid](j,i)*-1*g*cos(thet)) + (S->Q[vid](j,i)*-1*g*sin(thet)));//U->Q[rhoid](jg,ig) ;
     }
   }
 }
@@ -434,15 +434,15 @@ void fFlux(double F[], double U[], double nxhat, double nyhat)
   double bxHat = V[bxid]*nxhat+V[byid]*nyhat;
 
   F[rhoid] = V[rhoid]*uHat; 
-  F[uid] = V[rhoid]*V[uid]*uHat - V[bxid]*bxHat/MU0 + V[pid]*nxhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nxhat/(2*MU0);
+  F[uid] = V[rhoid]*V[uid]*uHat - V[bxid]*bxHat/MU0 + V[piid]*nxhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nxhat/(2*MU0);
 
-  F[vid] = V[rhoid]*uHat*V[vid]- bxHat*V[byid]/MU0+ V[pid]*nyhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nyhat/(2*MU0);
+  F[vid] = V[rhoid]*uHat*V[vid]- bxHat*V[byid]/MU0+ V[piid]*nyhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nyhat/(2*MU0);
 
   F[wid] = V[rhoid]*uHat*V[wid] - bxHat*V[bzid]/MU0;
 
-  e = V[pid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
+  e = V[piid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
 
-  F[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*uHat - (1/MU0)*bxHat*(V[uid]*V[bxid]+V[vid]*V[byid]+V[wid]*V[bzid]);
+  F[piid] = (e+V[piid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*uHat - (1/MU0)*bxHat*(V[uid]*V[bxid]+V[vid]*V[byid]+V[wid]*V[bzid]);
 
   F[bxid] = uHat*V[bxid]-V[uid]*bxHat;
 
@@ -454,15 +454,15 @@ void fFlux(double F[], double U[], double nxhat, double nyhat)
   //F[eq] = 0.0;
   /*
      F[rhoid] = V[rhoid]*V[uid]; 
-     F[uid] = V[rhoid]*V[uid]*V[uid] - (V[bxid]*V[bxid])/MU0 + V[pid] + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])/(2*MU0);
+     F[uid] = V[rhoid]*V[uid]*V[uid] - (V[bxid]*V[bxid])/MU0 + V[piid] + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])/(2*MU0);
 
      F[vid] = V[rhoid]*V[uid]*V[vid]- V[bxid]*V[byid]/MU0;
 
      F[wid] = V[rhoid]*V[uid]*V[wid] - V[bxid]*V[bzid]/MU0;
 
-     e = V[pid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
+     e = V[piid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
 
-     F[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*V[uid] - (1/MU0)*V[bxid]*(V[uid]*V[bxid]+V[vid]*V[byid]+V[wid]*V[bzid]);
+     F[piid] = (e+V[piid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*V[uid] - (1/MU0)*V[bxid]*(V[uid]*V[bxid]+V[vid]*V[byid]+V[wid]*V[bzid]);
 
      F[bxid] = 0;
 
@@ -483,15 +483,15 @@ void gFlux(double G[], double U[], double nxhat, double nyhat)
 
   G[rhoid] = V[rhoid]*vHat;
 
-  G[uid] = V[rhoid]*V[uid]*vHat- V[bxid]*byHat/MU0 + V[pid]*nxhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nxhat/(2*MU0);
+  G[uid] = V[rhoid]*V[uid]*vHat- V[bxid]*byHat/MU0 + V[piid]*nxhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nxhat/(2*MU0);
 
-  G[vid] = V[rhoid]*V[vid]*vHat - V[byid]*byHat/MU0 + V[pid]*nyhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nyhat/(2*MU0);
+  G[vid] = V[rhoid]*V[vid]*vHat - V[byid]*byHat/MU0 + V[piid]*nyhat + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])*nyhat/(2*MU0);
 
   G[wid] = V[rhoid]*vHat*V[wid]-byHat*V[bzid]/MU0;
 
-  e = V[pid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
+  e = V[piid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
 
-  G[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*vHat - (1/MU0)*byHat*(V[uid]*V[bxid]+V[vid]*V[byid]+ V[wid]*V[bzid]);
+  G[piid] = (e+V[piid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*vHat - (1/MU0)*byHat*(V[uid]*V[bxid]+V[vid]*V[byid]+ V[wid]*V[bzid]);
 
   G[bxid] = vHat*V[bxid]-V[uid]*byHat;
 
@@ -506,13 +506,13 @@ void gFlux(double G[], double U[], double nxhat, double nyhat)
 
      G[uid] = V[rhoid]*V[uid]*V[vid]- V[bxid]*V[byid]/MU0;
 
-     G[vid] = V[rhoid]*V[vid]*V[vid] - (V[byid]*V[byid])/MU0 + V[pid] + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])/(2*MU0);
+     G[vid] = V[rhoid]*V[vid]*V[vid] - (V[byid]*V[byid])/MU0 + V[piid] + (V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid])/(2*MU0);
 
      G[wid] = V[rhoid]*V[vid]*V[wid]-V[byid]*V[bzid]/MU0;
 
-     e = V[pid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
+     e = V[piid]/(GAMMA-1)+0.5*V[rhoid]*(V[uid]*V[uid]+V[vid]*V[vid]+V[wid]*V[wid]) + 0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]);
 
-     G[pid] = (e+V[pid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*V[vid] - (1/MU0)*V[byid]*(V[uid]*V[bxid]+V[vid]*V[byid]+ V[wid]*V[bzid]);
+     G[piid] = (e+V[piid]+0.5*(1/MU0)*(V[bxid]*V[bxid]+V[byid]*V[byid]+V[bzid]*V[bzid]))*V[vid] - (1/MU0)*V[byid]*(V[uid]*V[bxid]+V[vid]*V[byid]+ V[wid]*V[bzid]);
 
      G[bxid] = V[vid]*V[bxid]-V[uid]*V[byid];
 
@@ -740,7 +740,7 @@ double computeMaxSpeed(double V[], int ForG)
   u = V[uid];
   v = V[vid];
   w = V[wid];
-  p = V[pid];
+  p = V[piid];
   bx = V[bxid];
   by = V[byid];
   bz = V[bzid];
@@ -832,13 +832,13 @@ void slipwallBC(
         V->Q[vid](J+j, I+sign*i) = -ny*(uvel*nx+vvel*ny) + nx*(-uvel*ny + vvel*nx);
 
         // extrapolate P
-        V->Q[pid](J+j, I+sign*i) =  2.0*V->Q[pid](J+j, I+sign*(i-1))-V->Q[pid](J+j, I+sign*(i-2));
+        V->Q[piid](J+j, I+sign*i) =  2.0*V->Q[piid](J+j, I+sign*(i-1))-V->Q[piid](J+j, I+sign*(i-2));
         V->Q[bxid](J+j, I+sign*i) =  2.0*V->Q[bxid](J+j, I+sign*(i-1))-V->Q[bxid](J+j, I+sign*(i-2));
         V->Q[byid](J+j, I+sign*i) =  2.0*V->Q[byid](J+j, I+sign*(i-1))-V->Q[byid](J+j, I+sign*(i-2));
         V->Q[bzid](J+j, I+sign*i) =  2.0*V->Q[bzid](J+j, I+sign*(i-1))-V->Q[bzid](J+j, I+sign*(i-2));
         V->Q[wid](J+j, I+sign*i) =  2.0*V->Q[wid](J+j, I+sign*(i-1))-V->Q[wid](J+j, I+sign*(i-2));
         T(J+j, I+sign*i) = Temp; // copy temperature extrapolate pressure then compute rho
-        V->Q[rhoid](J+j, I+sign*i) = V->Q[pid](J+j, I+sign*i) / (R*T(J+j, I+sign*i));
+        V->Q[rhoid](J+j, I+sign*i) = V->Q[piid](J+j, I+sign*i) / (R*T(J+j, I+sign*i));
       }
     }
   }
@@ -872,13 +872,13 @@ void slipwallBC(
         Temp = T(j_in_Begin - sign*j, I+i); // copy val
         V->Q[uid](J+sign*j, I+i) = -nx*(uvel*nx+vvel*ny) - ny*(-uvel*ny + vvel*nx);
         V->Q[vid](J+sign*j, I+i) = -ny*(uvel*nx+vvel*ny) + nx*(-uvel*ny + vvel*nx);
-        V->Q[pid](J+sign*j, I+i) = 2.0*V->Q[pid](J+sign*(j-1), I+i) - V->Q[pid](J+sign*(j-2), I+i);
+        V->Q[piid](J+sign*j, I+i) = 2.0*V->Q[piid](J+sign*(j-1), I+i) - V->Q[piid](J+sign*(j-2), I+i);
         V->Q[wid](J+sign*j, I+i) = 2.0*V->Q[wid](J+sign*(j-1), I+i) - V->Q[wid](J+sign*(j-2), I+i);
         V->Q[bxid](J+sign*j, I+i) = 2.0*V->Q[bxid](J+sign*(j-1), I+i) - V->Q[bxid](J+sign*(j-2), I+i);
         V->Q[byid](J+sign*j, I+i) = 2.0*V->Q[byid](J+sign*(j-1), I+i) - V->Q[byid](J+sign*(j-2), I+i);
         V->Q[bzid](J+sign*j, I+i) = 2.0*V->Q[bzid](J+sign*(j-1), I+i) - V->Q[bzid](J+sign*(j-2), I+i);
         T(J+sign*j, I+i) = Temp;
-        V->Q[rhoid](J+sign*j, I+i) = V->Q[pid](J+sign*j, I+i) / (R*T(J+sign*j, I+i));
+        V->Q[rhoid](J+sign*j, I+i) = V->Q[piid](J+sign*j, I+i) / (R*T(J+sign*j, I+i));
       }
     }
   }
@@ -987,7 +987,7 @@ void initialize(
       V->Q[uid](j,i) = vPert*decay*sin(2.0*PI*rmidd*thet/lambdaM);
       V->Q[vid](j,i) = vPert*decay*cos(2.0*PI*rmidd*thet/lambdaM);
       V->Q[wid](j,i) = 0.0; 
-      V->Q[pid](j,i) = p0 - V->Q[rhoid](j,i)*g*(r-rmidd);
+      V->Q[piid](j,i) = p0 - V->Q[rhoid](j,i)*g*(r-rmidd);
       V->Q[bxid](j,i) = Bx*sin(thet); 
       V->Q[byid](j,i) = -1*Bx*cos(thet); 
       V->Q[bzid](j,i) = 0.0; 
@@ -1013,7 +1013,7 @@ void outputArrayMap(
   outputArray(Address, outString, outSingle, n);
   outSingle = out->Q[vid]; outString = FileName+"_v" ;
   outputArray(Address, outString, outSingle, n);
-  outSingle = out->Q[pid]; outString = FileName+"_p" ;
+  outSingle = out->Q[piid]; outString = FileName+"_p" ;
   outputArray(Address, outString, outSingle, n);
   outSingle = out->Q[bxid]; outString = FileName+"_bx" ;
   outputArray(Address, outString, outSingle, n);
@@ -1061,7 +1061,7 @@ void primToCons(
       U->Q[uid](j,i) = V->Q[rhoid](j,i)*(V->Q[uid](j,i));
       U->Q[vid](j,i) = V->Q[rhoid](j,i)*(V->Q[vid](j,i));
       U->Q[wid](j,i) = V->Q[rhoid](j,i)*(V->Q[wid](j,i));
-      U->Q[pid](j,i) = V->Q[pid](j,i)/(GAMMA - 1.0) 
+      U->Q[piid](j,i) = V->Q[piid](j,i)/(GAMMA - 1.0) 
         + 0.5*V->Q[rhoid](j,i)*((V->Q[uid](j,i))*(V->Q[uid](j,i))) 
         + 0.5*V->Q[rhoid](j,i)*((V->Q[vid](j,i))*(V->Q[vid](j,i))) 
         + 0.5*V->Q[rhoid](j,i)*((V->Q[wid](j,i))*(V->Q[wid](j,i))) 
@@ -1090,7 +1090,7 @@ void consToPrim(
       V->Q[uid](j,i)= U->Q[uid](j,i)/(U->Q[rhoid](j,i));
       V->Q[vid](j,i)= U->Q[vid](j,i)/(U->Q[rhoid](j,i));
       V->Q[wid](j,i)= U->Q[wid](j,i)/(U->Q[rhoid](j,i));
-      V->Q[pid](j,i)= (GAMMA - 1.0) *(U->Q[pid](j,i)  
+      V->Q[piid](j,i)= (GAMMA - 1.0) *(U->Q[piid](j,i)  
           - 0.5*U->Q[uid](j,i)*((U->Q[uid](j,i))/(U->Q[rhoid](j,i))) 
           - 0.5*U->Q[vid](j,i)*((U->Q[vid](j,i))/(U->Q[rhoid](j,i))) 
           - 0.5*U->Q[wid](j,i)*((U->Q[wid](j,i))/(U->Q[rhoid](j,i))) 
@@ -1120,7 +1120,7 @@ void cons2Prim(
     V[index+uid] = U0[uid]/U0[rhoid]; //rhou/rho
     V[index+vid] = U0[vid]/U0[rhoid]; //rhou/rho
     V[index+wid] = U0[wid]/U0[rhoid]; //rhou/rho
-    V[index+pid] = (GAMMA-1.0)*(U0[pid] - 0.5*(U0[uid]*U0[uid] + U0[vid]*U0[vid] + U0[wid]*U0[wid])/U0[rhoid] - 0.5*((U0[bxid]*U0[bxid] + U0[byid]*U0[byid] + U0[bzid]*U0[bzid]))/MU0);
+    V[index+piid] = (GAMMA-1.0)*(U0[piid] - 0.5*(U0[uid]*U0[uid] + U0[vid]*U0[vid] + U0[wid]*U0[wid])/U0[rhoid] - 0.5*((U0[bxid]*U0[bxid] + U0[byid]*U0[byid] + U0[bzid]*U0[bzid]))/MU0);
   }
 }
 
@@ -1150,8 +1150,8 @@ void computeFluxVL(double* FFLUX, double* ul, double* ur, double nxhat, double n
   cons2Prim(vl, ul, NEQ);
   cons2Prim(vr, ur, NEQ);
   // compute sound speed
-  a_L = sqrt(GAMMA*vl[pid] / vl[rhoid]); 
-  a_R = sqrt(GAMMA*vr[pid] / vr[rhoid]); 
+  a_L = sqrt(GAMMA*vl[piid] / vl[rhoid]); 
+  a_R = sqrt(GAMMA*vr[piid] / vr[rhoid]); 
 
   // compute speed
   U_L = vl[uid]*nxhat + vl[vid]*nyhat;
@@ -1185,10 +1185,10 @@ void computeFluxVL(double* FFLUX, double* ul, double* ur, double nxhat, double n
   D_n = alpha_n*(1+beta_R) - beta_R*p_bar_n;
 
   // left and right enthalpy
-  ht_L = (GAMMA/(GAMMA-1))*vl[pid]/vl[rhoid] 
+  ht_L = (GAMMA/(GAMMA-1))*vl[piid]/vl[rhoid] 
     + 0.5*( vl[uid]*vl[uid] + 
         vl[vid]*vl[vid]);
-  ht_R = (GAMMA/(GAMMA-1))*vr[pid]/vr[rhoid] 
+  ht_R = (GAMMA/(GAMMA-1))*vr[piid]/vr[rhoid] 
     + 0.5*( vr[uid]*vr[uid] + 
         vr[vid]*vr[vid]);
 
@@ -1202,16 +1202,16 @@ void computeFluxVL(double* FFLUX, double* ul, double* ur, double nxhat, double n
   Fc[vid] = vl[rhoid]*a_L*c_p*vl[vid] 
     + vr[rhoid]*a_R*c_n*vr[vid];
 
-  Fc[pid] = vl[rhoid]*a_L*c_p*ht_L 
+  Fc[piid] = vl[rhoid]*a_L*c_p*ht_L 
     + vr[rhoid]*a_R*c_n*ht_R;
 
   // compute pressure flux contribution
   Fp[rhoid] = 0.0;
-  Fp[uid] = D_p*nxhat*vl[pid] + 
-    D_n*nxhat*vr[pid];
-  Fp[vid] = D_p*nyhat*vl[pid] + 
-    D_n*nyhat*vr[pid];
-  Fp[pid] = 0.0;
+  Fp[uid] = D_p*nxhat*vl[piid] + 
+    D_n*nxhat*vr[piid];
+  Fp[vid] = D_p*nyhat*vl[piid] + 
+    D_n*nyhat*vr[piid];
+  Fp[piid] = 0.0;
 
   // loop over and add the two
   for (int eq = 0; eq < NEQ; eq++)
@@ -1268,9 +1268,9 @@ void computeFluxRoe(double* FFLUX, double* ul, double* ur, double nxhat, double 
   U_hat_Roe = u_Roe*nxhat + v_Roe*nyhat;// get the speed
 
   // Roe averaged vars
-  ht_L = (GAMMA/(GAMMA-1))*vl[pid]/vl[rhoid] 
+  ht_L = (GAMMA/(GAMMA-1))*vl[piid]/vl[rhoid] 
     + 0.5*( vl[uid]*vl[uid] + vl[vid]*vl[vid]);
-  ht_R = (GAMMA/(GAMMA-1))*vr[pid]/vr[rhoid] 
+  ht_R = (GAMMA/(GAMMA-1))*vr[piid]/vr[rhoid] 
     + 0.5*( vr[uid]*vr[uid] + vr[vid]*vr[vid]);
   ht_Roe = (R_Roe*ht_R + ht_L) / (R_Roe + 1);
 
@@ -1300,28 +1300,28 @@ void computeFluxRoe(double* FFLUX, double* ul, double* ur, double nxhat, double 
   r1[rhoid] = 1.0;
   r1[uid] = u_Roe;
   r1[vid] = v_Roe;
-  r1[pid] = 0.5*(u_Roe*u_Roe + v_Roe*v_Roe);
+  r1[piid] = 0.5*(u_Roe*u_Roe + v_Roe*v_Roe);
 
   r2[rhoid] = 0.0;
   r2[uid] = rho_Roe * nyhat;
   r2[vid] = -rho_Roe * nxhat;
-  r2[pid] = rho_Roe*(u_Roe*nyhat - v_Roe*nxhat);
+  r2[piid] = rho_Roe*(u_Roe*nyhat - v_Roe*nxhat);
 
   r3[rhoid] = (0.5*rho_Roe/a_Roe);
   r3[uid] = (0.5*rho_Roe/a_Roe) * ( u_Roe + a_Roe*nxhat );
   r3[vid] = (0.5*rho_Roe/a_Roe) * ( v_Roe + a_Roe*nyhat );
-  r3[pid] = (0.5*rho_Roe/a_Roe) * ( ht_Roe + a_Roe*U_hat_Roe );
+  r3[piid] = (0.5*rho_Roe/a_Roe) * ( ht_Roe + a_Roe*U_hat_Roe );
 
   r4[rhoid] = (-0.5*rho_Roe/a_Roe);
   r4[uid] = (-0.5*rho_Roe/a_Roe) * ( u_Roe - a_Roe*nxhat );
   r4[vid] = (-0.5*rho_Roe/a_Roe) * ( v_Roe - a_Roe*nyhat );
-  r4[pid] = (-0.5*rho_Roe/a_Roe) * ( ht_Roe - a_Roe*U_hat_Roe );
+  r4[piid] = (-0.5*rho_Roe/a_Roe) * ( ht_Roe - a_Roe*U_hat_Roe );
 
   // compute delta's
   drho = vr[rhoid] - vl[rhoid];
   du = vr[uid] - vl[uid];
   dv = vr[vid] - vl[vid];
-  dp = vr[pid] - vl[pid];
+  dp = vr[piid] - vl[piid];
 
   // compute characteristic variables
   dw1 = drho - dp/(a_Roe*a_Roe);
@@ -1337,14 +1337,14 @@ void computeFluxRoe(double* FFLUX, double* ul, double* ur, double nxhat, double 
   F_L[rhoid] = vl[rhoid]*U_hat_Roe_L;
   F_R[rhoid] = vr[rhoid]*U_hat_Roe_R;
 
-  F_L[uid] = vl[rhoid]*vl[uid]*U_hat_Roe_L + vl[pid]*nxhat;
-  F_R[uid] = vr[rhoid]*vr[uid]*U_hat_Roe_R + vr[pid]*nxhat;
+  F_L[uid] = vl[rhoid]*vl[uid]*U_hat_Roe_L + vl[piid]*nxhat;
+  F_R[uid] = vr[rhoid]*vr[uid]*U_hat_Roe_R + vr[piid]*nxhat;
 
-  F_L[vid] = vl[rhoid]*vl[vid]*U_hat_Roe_L + vl[pid]*nyhat;
-  F_R[vid] = vr[rhoid]*vr[vid]*U_hat_Roe_R + vr[pid]*nyhat;
+  F_L[vid] = vl[rhoid]*vl[vid]*U_hat_Roe_L + vl[piid]*nyhat;
+  F_R[vid] = vr[rhoid]*vr[vid]*U_hat_Roe_R + vr[piid]*nyhat;
 
-  F_L[pid] = vl[rhoid]*ht_L*U_hat_Roe_L;
-  F_R[pid] = vr[rhoid]*ht_R*U_hat_Roe_R;
+  F_L[piid] = vl[rhoid]*ht_L*U_hat_Roe_L;
+  F_R[piid] = vr[rhoid]*ht_R*U_hat_Roe_R;
 
   // Combine 1st order and 2nd order
   // sum over the right vectors
@@ -1369,8 +1369,8 @@ void computeFluxHLLD(double F[], double UL[], double UR[], double& nxhat, double
 
   double rhoL = UL[rhoid];
   double rhoR = UR[rhoid];
-  double pL = UL[pid];
-  double pR = UR[pid];
+  double pL = UL[piid];
+  double pR = UR[piid];
 
 
 
@@ -1429,8 +1429,8 @@ void computeFluxHLLD(double F[], double UL[], double UR[], double& nxhat, double
   double bzLs = bzL*((rhoL*(SL-uL)*(SL-uL)-bparr*bparr)/(rhoL*(SL-uL)*(SL-SM)-bparr*bparr));
   double bzRs = bzR*((rhoR*(SR-uR)*(SR-uR)-bparr*bparr)/(rhoR*(SR-uR)*(SR-SM)-bparr*bparr));
 
-  double eLs = ((SL-uL)*UL[pid] - pTL*uL + pTs*SM + bparr*((vL*byL+wL*bzL) - (uLs*bparr+vLs*byLs+wLs*bzLs)))/(SL-SM);
-  double eRs = ((SR-uR)*UR[pid] - pTR*uR + pTs*SM + bparr*((vR*byR+wR*bzR) - (uRs*bparr+vRs*byRs+wRs*bzRs)))/(SR-SM);
+  double eLs = ((SL-uL)*UL[piid] - pTL*uL + pTs*SM + bparr*((vL*byL+wL*bzL) - (uLs*bparr+vLs*byLs+wLs*bzLs)))/(SL-SM);
+  double eRs = ((SR-uR)*UR[piid] - pTR*uR + pTs*SM + bparr*((vR*byR+wR*bzR) - (uRs*bparr+vRs*byRs+wRs*bzRs)))/(SR-SM);
 
   // compute next state
 
@@ -1468,7 +1468,7 @@ void computeFluxHLLD(double F[], double UL[], double UR[], double& nxhat, double
   ULs[uid] = uLs;
   ULs[vid] = vLs;
   ULs[wid] = wLs;
-  ULs[pid] = eLs;
+  ULs[piid] = eLs;
   ULs[bxid] = bparr;
   ULs[byid] = byLs;
   ULs[bzid] = bzLs;
@@ -1477,7 +1477,7 @@ void computeFluxHLLD(double F[], double UL[], double UR[], double& nxhat, double
   ULss[uid] =     uLss;
   ULss[vid] =     vLss;
   ULss[wid] =     wLss;
-  ULss[pid] =     eLss;
+  ULss[piid] =     eLss;
   ULss[bxid] =  bparr;
   ULss[byid] =   byLss;
   ULss[bzid] =   bzLss;
@@ -1486,7 +1486,7 @@ void computeFluxHLLD(double F[], double UL[], double UR[], double& nxhat, double
   URs[uid] = uRs;
   URs[vid] = vRs;
   URs[wid] = wRs;
-  URs[pid] = eRs;
+  URs[piid] = eRs;
   URs[bxid] = bparr;
   URs[byid] = byRs;
   URs[bzid] = bzRs;
@@ -1495,7 +1495,7 @@ void computeFluxHLLD(double F[], double UL[], double UR[], double& nxhat, double
   URss[uid] =     uRss;
   URss[vid] =     vRss;
   URss[wid] =     wRss;
-  URss[pid] =     eRss;
+  URss[piid] =     eRss;
   URss[bxid] =  bparr;
   URss[byid] =   byRss;
   URss[bzid] =   bzRss;

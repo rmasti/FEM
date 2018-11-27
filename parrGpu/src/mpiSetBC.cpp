@@ -119,7 +119,7 @@ void mpiSetBc(
         // extrapolate from cells above
         U->Q[rhoid](jg,i) = 2.0*U->Q[rhoid](jg+sign*1,i) - U->Q[rhoid](jg+sign*2,i);
         U->Q[wid](jg,i) =   2.0*U->Q[wid](jg+sign*1,i) - U->Q[wid](jg+sign*2,i);
-        U->Q[pid](jg,i) =   2.0*U->Q[pid](jg+sign*1,i) - U->Q[pid](jg+sign*2,i);
+        U->Q[piid](jg,i) =   2.0*U->Q[piid](jg+sign*1,i) - U->Q[piid](jg+sign*2,i);
         U->Q[bzid](jg,i) =  2.0*U->Q[bzid](jg+sign*1,i) - U->Q[bzid](jg+sign*2,i);
       }
   }
@@ -175,7 +175,7 @@ void mpiSetBc(
         // extrapolate
         U->Q[rhoid](jg,i) = 2.0*U->Q[rhoid](jg+sign*1,i) - U->Q[rhoid](jg+sign*2,i);
         U->Q[wid](jg,i) =   2.0*U->Q[wid](jg+sign*1,i) - U->Q[wid](jg+sign*2,i);
-        U->Q[pid](jg,i) =   2.0*U->Q[pid](jg+sign*1,i) - U->Q[pid](jg+sign*2,i);
+        U->Q[piid](jg,i) =   2.0*U->Q[piid](jg+sign*1,i) - U->Q[piid](jg+sign*2,i);
         U->Q[bzid](jg,i) =  2.0*U->Q[bzid](jg+sign*1,i) - U->Q[bzid](jg+sign*2,i);
       }
   }
@@ -374,7 +374,7 @@ void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd
         // extrapolate
         U->Q[rhoid](jg,i) = 2.0*U->Q[rhoid](jg+sign*1,i) - U->Q[rhoid](jg+sign*2,i);
         U->Q[wid](jg,i) =   2.0*U->Q[wid](jg+sign*1,i) - U->Q[wid](jg+sign*2,i);
-        U->Q[pid](jg,i) =   2.0*U->Q[pid](jg+sign*1,i) - U->Q[pid](jg+sign*2,i);
+        U->Q[piid](jg,i) =   2.0*U->Q[piid](jg+sign*1,i) - U->Q[piid](jg+sign*2,i);
         U->Q[bzid](jg,i) =  2.0*U->Q[bzid](jg+sign*1,i) - U->Q[bzid](jg+sign*2,i);
       }
   }
@@ -422,7 +422,7 @@ void setBcSend(Map2Eigen* U, const RowMajorMatrixXd& nix, const RowMajorMatrixXd
         // extrapolate
         U->Q[rhoid](jg,i) = 2.0*U->Q[rhoid](jg+sign*1,i) - U->Q[rhoid](jg+sign*2,i);
         U->Q[wid](jg,i) =   2.0*U->Q[wid](jg+sign*1,i) - U->Q[wid](jg+sign*2,i);
-        U->Q[pid](jg,i) =   2.0*U->Q[pid](jg+sign*1,i) - U->Q[pid](jg+sign*2,i);
+        U->Q[piid](jg,i) =   2.0*U->Q[piid](jg+sign*1,i) - U->Q[piid](jg+sign*2,i);
         U->Q[bzid](jg,i) =  2.0*U->Q[bzid](jg+sign*1,i) - U->Q[bzid](jg+sign*2,i);
       }
   }
