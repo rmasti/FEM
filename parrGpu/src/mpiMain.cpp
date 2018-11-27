@@ -109,6 +109,7 @@ int main(int argc, char *argv[]){
   dt = computeTimeStepU(VolumeL, AiL, AjL, nixL, niyL, njxL, njyL, U, C);
   MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, com2d);
 
+  MPI_Barrier(com2d);
 
   ////////// load on to device ////////// 
   // Things needed to put on to device
@@ -129,10 +130,10 @@ int main(int argc, char *argv[]){
   bytes = bytes*8; 
   
   printf("total gb loaded onto gpu: tot = %lf\n", bytes*1.0e-9);
+
  
   int n=0;
 
-  MPI_Barrier(com2d);
 
   outputArrayMap(outputFolder, "UL", U, rank);
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
