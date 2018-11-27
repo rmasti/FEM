@@ -1,4 +1,5 @@
 #include "mhdRT.hpp"
+#include "occa.hpp"
 
 int main(int argc, char *argv[]){
   MPI_Init(&argc, &argv);
@@ -20,8 +21,8 @@ int main(int argc, char *argv[]){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  string mesh = "../mesh/360x300.msh"; //debugMatlab.msh";
-  //string mesh = "../mesh/16x10.msh"; //debugMatlab.msh";
+  //string mesh = "../mesh/360x300.msh"; //debugMatlab.msh";
+  string mesh = "../mesh/16x10.msh"; //debugMatlab.msh";
   string outputFolder = "./output/";
   //string outputFolder = "/mnt/c/Users/rlm78/Downloads/FEM/";
 
@@ -119,21 +120,48 @@ int main(int argc, char *argv[]){
   // Volume L
   // U, U_RK
   // U_B, U_T, U_L, U_R, F, G
-  // S, RES, xcL, ycL
+  // S, Res, xcL, ycL
   
   // total bytes
   
   int bytes = njc_g*nic_g*NEQ*2; // U, U_RK
   bytes += njc*(nic+1)*(NEQ*3+3); // U_B, U_T, G, nixL, niyL, AiL
   bytes += (njc+1)*(nic)*(NEQ*3+3); // U_L, U_R, F, njxL, njyL, AjL
-  bytes += njc*nic*(3+NEQ*2); // vol, xcL, ycL, S, RES
+  bytes += njc*nic*(3+NEQ*2); // vol, xcL, ycL, S, Res
   bytes = bytes*8; 
   
   printf("total gb loaded onto gpu: tot = %lf\n", bytes*1.0e-9);
 
- 
-  int n=0;
+  occa::device device;
+  device.setup("mode: 'CUDA', device_id : 0"); 
 
+  occa::memory o_U = device.malloc(njc_g*nic_g*NEQ*sizeof(double), U->Q_raw);
+  occa::memory o_U_RK = device.malloc(njc_g*nic_g*NEQ*sizeof(double), U_RK->Q_raw);
+
+  occa::memory o_nixL = device.malloc(njc*(nic+1)*sizeof(double), nixL.data());
+  occa::memory o_niyL = device.malloc(njc*(nic+1)*sizeof(double), niyL.data());
+  occa::memory o_AiL = device.malloc(njc*(nic+1)*sizeof(double), AiL.data());
+  occa::memory o_U_B = device.malloc(njc*(nic+1)*NEQ*sizeof(double), U_B->Q_raw);
+  occa::memory o_U_T = device.malloc(njc*(nic+1)*NEQ*sizeof(double), U_T->Q_raw);
+  occa::memory o_G = device.malloc(njc*(nic+1)*NEQ*sizeof(double), G->Q_raw);
+
+  occa::memory o_njxL = device.malloc((njc+1)*(nic)*sizeof(double), njxL.data());
+  occa::memory o_njyL = device.malloc((njc+1)*(nic)*sizeof(double), njyL.data());
+  occa::memory o_AjL = device.malloc((njc+1)*(nic)*sizeof(double), AjL.data());
+  occa::memory o_U_L = device.malloc((njc+1)*(nic)*NEQ*sizeof(double), U_L->Q_raw);
+  occa::memory o_U_R = device.malloc((njc+1)*(nic)*NEQ*sizeof(double), U_R->Q_raw);
+  occa::memory o_F = device.malloc((njc+1)*(nic)*NEQ*sizeof(double), F->Q_raw);
+  
+  occa::memory o_xcL = device.malloc((njc)*(nic)*sizeof(double), xcL.data());
+  occa::memory o_ycL = device.malloc((njc)*(nic)*sizeof(double), ycL.data());
+  occa::memory o_VolumeL = device.malloc((njc)*(nic)*sizeof(double), VolumeL.data());
+  occa::memory o_S = device.malloc((njc)*(nic)*NEQ*sizeof(double), S->Q_raw);
+  occa::memory o_Res = device.malloc((njc)*(nic)*NEQ*sizeof(double), Res->Q_raw);
+ 
+  o_xcL.copyFrom(xcL.data());
+  device.finish();
+  o_xcL.copyTo(xcL.data());
+  int n=0;
 
   outputArrayMap(outputFolder, "UL", U, rank);
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
@@ -151,8 +179,10 @@ int main(int argc, char *argv[]){
       mpiSetBc(U, nixL, niyL, njxL, njyL, com2d,  C);
       t = clock()-t;
       avgT[0] =  ((float)t)/CLOCKS_PER_SEC;
-
       MPI_Barrier(com2d);
+
+      // copy to gpu
+      o_U.copyFrom(U);
 
       t = clock();
       computeSourceTerm(S, U_RK, xcL, ycL, C);
