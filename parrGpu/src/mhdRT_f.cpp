@@ -380,11 +380,9 @@ void computeFluxHLL(double F[], double UA[], double UB[], double& nxhat, double&
 
   double lambdaA, lambdaB;
   lambdaA = mymin(u_A, u_B) - mymax(CA, CB);
-
   lambdaB = mymax(u_A, u_B) + mymax(CA, CB);
 
   double FA[NEQ], FB[NEQ];
-
   if (ForG == 0)
   {
     fFlux(FA, UA, nxhat, nyhat);

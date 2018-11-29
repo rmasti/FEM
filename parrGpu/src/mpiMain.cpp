@@ -175,9 +175,15 @@ int main(int argc, char *argv[]){
   props["defines/o_njc_g"]=njc_g;
   props["defines/o_nic_g"]=nic_g;
   props["defines/o_limiter"]=C.f_limiter;
+  props["defines/o_limiter"]=C.f_limiter;
+  props["defines/o_gamma"]=GAMMA;
+  props["defines/o_mu0"]=MU0;
+
+  props["includes/"]+="include/muscl.hpp";
 
   occa::kernel computeSourceTerm = device.buildKernel("src/mhdRT_f.okl", "computeSourceTerm", props);
   occa::kernel MUSCL = device.buildKernel("src/mhdRT_f.okl", "MUSCL", props);
+  occa::kernel compute2dFlux = device.buildKernel("src/mhdRT_f.okl", "compute2dFlux", props);
 
   device.finish();
 
@@ -230,11 +236,18 @@ int main(int argc, char *argv[]){
       cout << U_B->Q[rhoid] << endl; 
       cout << U_T->Q[rhoid] << endl; 
       */
+
       t = clock()-t;
       avgT[2] =  ((float)t)/CLOCKS_PER_SEC;
 
       t = clock();
-      compute2dFlux(F, G, U_L, U_R, U_B, U_T, njxL, njyL, nixL, niyL, C);
+      compute2dFlux(o_F, o_G, o_U_L, o_U_R, o_U_B, o_U_T, o_njxL, o_njyL, o_nixL, o_niyL);
+      o_F.copyTo(F->Q_raw);
+      o_G.copyTo(G->Q_raw);
+
+      cout << F->Q[rhoid] << endl;
+      cout << G->Q[rhoid] << endl;
+
       t = clock()-t;
       avgT[3] =  ((float)t)/CLOCKS_PER_SEC;
 

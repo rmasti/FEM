@@ -190,14 +190,123 @@
 {
   int nj = o_njc;
   int ni = o_nic;
-  double ul[NEQ], ur[NEQ], ub[NEQ], ut[NEQ];
-  double FFLUX[NEQ];
-  double GFLUX[NEQ];
+  double ul[o_NEQ], ur[o_NEQ], ub[o_NEQ], ut[o_NEQ];
+  double vl[o_NEQ], vr[o_NEQ];
+  double FA[o_NEQ], FB[o_NEQ];
+  double FFLUX[o_NEQ];
+  double GFLUX[o_NEQ];
+  double rho, u, v, w, bx, by, bz, p;
+
   for(int j = 0; j < nj; j++; @outer(0))
   {
-    for(int i = 0; i < ni; i++; @outer(0))
+    for(int i = 0; i <= ni; i++; @outer(1))
+    {
+      int ido = j*(ni+1)+i;
+      for(int eq = 0; eq < o_NEQ; eq++; @inner(0))
+      {
+        int id = (ido)*o_NEQ+eq;
+        ul[eq] = U_L[id];
+        ur[eq] = U_R[id];
+      }
+      
+      vl[o_rhoid] = ul[o_rhoid];
+      vl[o_uid] = ul[o_uid]/ul[o_rhoid];
+      vl[o_vid] = ul[o_vid]/ul[o_rhoid];
+      vl[o_wid] = ul[o_wid]/ul[o_rhoid];
+      vl[o_piid] = ((o_gamma - 1.0) *(ul[o_piid]-( 
+          - 0.5*ul[o_uid]*((ul[o_uid])/(ul[o_rhoid])) 
+          - 0.5*ul[o_vid]*((ul[o_vid])/(ul[o_rhoid])) 
+          - 0.5*ul[o_wid]*((ul[o_wid])/(ul[o_rhoid])) 
+          - 0.5*ul[o_bxid]*(ul[o_bxid])/o_mu0
+          - 0.5*ul[o_byid]*(ul[o_byid])/o_mu0
+          - 0.5*ul[o_bzid]*(ul[o_bzid])/o_mu0)));
+      vl[o_bxid] = ul[o_bxid];
+      vl[o_byid] = ul[o_byid];
+      vl[o_bzid] = ul[o_bzid];
 
+      double ca = sqrt(ul[o_bxid]*ul[o_bxid]+ul[o_byid]*ul[o_byid]+ul[o_bzid]*ul[o_bzid]);
+      double cs = sqrt(vl[o_piid]*o_gamma/ul[o_rhoid]);// p gamma/rho
+      double cadir = ul[o_bxid]*ul[o_bxid]/(o_mu0*ul[o_rhoid]);
+      double CA =sqrt(0.5*(ca*ca+cs*cs+sqrt((ca*ca+cs*cs)*(ca*ca+cs*cs)-4*cs*cs*cadir*cadir)));
 
+      vr[o_rhoid] = ur[o_rhoid];
+      vr[o_uid] = ur[o_uid]/ur[o_rhoid];
+      vr[o_vid] = ur[o_vid]/ur[o_rhoid];
+      vr[o_wid] = ur[o_wid]/ur[o_rhoid];
+      vr[o_piid] = ((o_gamma - 1.0) *(ur[o_piid]-( 
+          - 0.5*ur[o_uid]*((ur[o_uid])/(ur[o_rhoid])) 
+          - 0.5*ur[o_vid]*((ur[o_vid])/(ur[o_rhoid])) 
+          - 0.5*ur[o_wid]*((ur[o_wid])/(ur[o_rhoid])) 
+          - 0.5*ur[o_bxid]*(ur[o_bxid])/o_mu0
+          - 0.5*ur[o_byid]*(ur[o_byid])/o_mu0
+          - 0.5*ur[o_bzid]*(ur[o_bzid])/o_mu0)));
+      vr[o_bxid] = ur[o_bxid];
+      vr[o_byid] = ur[o_byid];
+      vr[o_bzid] = ur[o_bzid];
+
+      ca = sqrt(ur[o_bxid]*ur[o_bxid]+ur[o_byid]*ur[o_byid]+ur[o_bzid]*ur[o_bzid]);
+      cs = sqrt(vr[o_piid]*o_gamma/ur[o_rhoid]);// p gamma/rho
+      cadir = ur[o_byid]*ur[o_byid]/(o_mu0*ur[o_rhoid]);
+      double CB =sqrt(0.5*(ca*ca+cs*cs+sqrt((ca*ca+cs*cs)*(ca*ca+cs*cs)-4*cs*cs*cadir*cadir)));
+
+      double u_A = (ul[o_uid]*nix[ido]+ul[o_vid]*niy[ido])/ul[o_rhoid];
+      double u_B = (ur[o_uid]*nix[ido]+ur[o_vid]*niy[ido])/ur[o_rhoid];
+      double b_A = (ul[o_bxid]*nix[ido]+ul[o_byid]*niy[ido])/ul[o_rhoid];
+      double b_B = (ur[o_bxid]*nix[ido]+ur[o_byid]*niy[ido])/ur[o_rhoid];
+
+      double lambdaA = fmin(u_A, u_B) - fmax(CA, CB);
+      double lambdaB = fmax(u_A, u_B) + fmax(CA, CB);
+
+      FA[o_rhoid] = vl[o_rhoid]*u_A; 
+
+      FA[o_uid] = vl[o_rhoid]*vl[o_uid]*u_A - vl[o_bxid]*b_A/o_mu0 + vl[o_piid]*nix[ido] + (vl[o_bxid]*vl[o_bxid]+vl[o_byid]*vl[o_byid]+vl[o_bzid]*vl[o_bzid])*nix[ido]/(2*o_mu0);
+
+      FA[o_vid] = vl[o_rhoid]*u_A*vl[o_vid]- b_A*vl[o_byid]/o_mu0 + vl[o_piid]*niy[ido] + (vl[o_bxid]*vl[o_bxid]+vl[o_byid]*vl[o_byid]+vl[o_bzid]*vl[o_bzid])*niy[ido]/(2*o_mu0);
+
+      FA[o_wid] = vl[o_rhoid]*u_A*vl[o_wid] - b_A*vl[o_bzid]/o_mu0;
+
+      FA[o_piid] = (ul[o_piid]+vl[o_piid]+0.5*(1/o_mu0)*(vl[o_bxid]*vl[o_bxid]+vl[o_byid]*vl[o_byid]+vl[o_bzid]*vl[o_bzid]))*u_A - (1/o_mu0)*b_A*(vl[o_uid]*vl[o_bxid]+vl[o_vid]*vl[o_byid]+vl[o_wid]*vl[o_bzid]);
+
+      FA[o_bxid] = u_A*vl[o_bxid]-vl[o_uid]*b_A;
+
+      FA[o_byid] = u_A*vl[o_byid]-vl[o_vid]*b_A;
+
+      FA[o_bzid] = u_A*vl[o_bzid]-vl[o_wid]*b_A;
+
+      FB[o_rhoid] = vl[o_rhoid]*u_B; 
+
+      FB[o_uid] = vr[o_rhoid]*vr[o_uid]*u_B - vr[o_bxid]*b_B/o_mu0 + vr[o_piid]*nix[ido] + (vr[o_bxid]*vr[o_bxid]+vr[o_byid]*vr[o_byid]+vr[o_bzid]*vr[o_bzid])*nix[ido]/(2*o_mu0);
+
+      FB[o_vid] = vr[o_rhoid]*u_B*vr[o_vid]- b_B*vr[o_byid]/o_mu0 + vr[o_piid]*niy[ido] + (vr[o_bxid]*vr[o_bxid]+vr[o_byid]*vr[o_byid]+vr[o_bzid]*vr[o_bzid])*niy[ido]/(2*o_mu0);
+
+      FB[o_wid] = vr[o_rhoid]*u_B*vr[o_wid] - b_B*vr[o_bzid]/o_mu0;
+
+      FB[o_piid] = (ur[o_piid]+vr[o_piid]+0.5*(1/o_mu0)*(vr[o_bxid]*vr[o_bxid]+vr[o_byid]*vr[o_byid]+vr[o_bzid]*vr[o_bzid]))*u_B - (1/o_mu0)*b_B*(vr[o_uid]*vr[o_bxid]+vr[o_vid]*vr[o_byid]+vr[o_wid]*vr[o_bzid]);
+
+      FB[o_bxid] = u_B*vr[o_bxid]-vr[o_uid]*b_B;
+
+      FB[o_byid] = u_B*vr[o_byid]-vr[o_vid]*b_B;
+
+      FB[o_bzid] = u_B*vr[o_bzid]-vr[o_wid]*b_B;
+ 
+      if (lambdaA > 0)
+        for(int eq = 0; eq < o_NEQ; eq++)
+          F[ido*o_NEQ+eq] = FA[eq];
+      else if (lambdaB < 0)
+        for(int eq = 0; eq < o_NEQ; eq++)
+          F[ido*o_NEQ+eq] = FB[eq];
+      else if (lambdaB >=0 && lambdaA <=0)
+        for(int eq = 0; eq < o_NEQ; eq++)
+          F[ido*o_NEQ+eq] = (lambdaB*FA[eq] - lambdaA*FB[eq]+lambdaA*lambdaB*(ul[eq]-ur[eq]))/(lambdaB-lambdaA);
+      else
+      {
+        cerr << "ERROR: HLL Flux Calculation Lambda Unphysical" << endl;
+        exit(-1);
+      }
+
+      //cout << CA << endl;
+      //printf("j = %d, i = %d, j*(ni+1)+i=%d\n", j,i,j*(ni+1)+i);
+    }
   }
 /*
   int nj = F->Q[rhoid].rows();
@@ -217,6 +326,7 @@
         ub[eq] = U_B->Q[eq](j,i);
         ut[eq] = U_T->Q[eq](j,i);
       }
+
 
       computeFluxHLL(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
       computeFluxHLL(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
@@ -276,5 +386,3 @@
   }
 */
 }
-
-
