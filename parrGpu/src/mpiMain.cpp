@@ -5,7 +5,7 @@ int main(int argc, char *argv[]){
   MPI_Init(&argc, &argv);
 
   constants C;
-  C.f_limiter = 1;
+  C.f_limiter = 5;
   C.num_ghost = 3;
   C.cfl = 0.45;
   C.nmax = 10000;
@@ -138,29 +138,49 @@ int main(int argc, char *argv[]){
   occa::memory o_U = device.malloc(njc_g*nic_g*NEQ*sizeof(double), U->Q_raw);
   occa::memory o_U_RK = device.malloc(njc_g*nic_g*NEQ*sizeof(double), U_RK->Q_raw);
 
-  occa::memory o_nixL = device.malloc(njc*(nic+1)*sizeof(double), nixL.data());
-  occa::memory o_niyL = device.malloc(njc*(nic+1)*sizeof(double), niyL.data());
-  occa::memory o_AiL = device.malloc(njc*(nic+1)*sizeof(double), AiL.data());
-  occa::memory o_U_B = device.malloc(njc*(nic+1)*NEQ*sizeof(double), U_B->Q_raw);
-  occa::memory o_U_T = device.malloc(njc*(nic+1)*NEQ*sizeof(double), U_T->Q_raw);
-  occa::memory o_G = device.malloc(njc*(nic+1)*NEQ*sizeof(double), G->Q_raw);
+  occa::memory o_nixL = device.malloc(nic*(njc+1)*sizeof(double), nixL.data());
+  occa::memory o_niyL = device.malloc(nic*(njc+1)*sizeof(double), niyL.data());
+  occa::memory o_AiL =  device.malloc(nic*(njc+1)*sizeof(double), AiL.data());
+  occa::memory o_U_B =  device.malloc(nic*(njc+1)*NEQ*sizeof(double), U_B->Q_raw);
+  occa::memory o_U_T =  device.malloc(nic*(njc+1)*NEQ*sizeof(double), U_T->Q_raw);
+  occa::memory o_G =    device.malloc(nic*(njc+1)*NEQ*sizeof(double), G->Q_raw);
 
-  occa::memory o_njxL = device.malloc((njc+1)*(nic)*sizeof(double), njxL.data());
-  occa::memory o_njyL = device.malloc((njc+1)*(nic)*sizeof(double), njyL.data());
-  occa::memory o_AjL = device.malloc((njc+1)*(nic)*sizeof(double), AjL.data());
-  occa::memory o_U_L = device.malloc((njc+1)*(nic)*NEQ*sizeof(double), U_L->Q_raw);
-  occa::memory o_U_R = device.malloc((njc+1)*(nic)*NEQ*sizeof(double), U_R->Q_raw);
-  occa::memory o_F = device.malloc((njc+1)*(nic)*NEQ*sizeof(double), F->Q_raw);
+  occa::memory o_njxL = device.malloc((nic+1)*(njc)*sizeof(double), njxL.data());
+  occa::memory o_njyL = device.malloc((nic+1)*(njc)*sizeof(double), njyL.data());
+  occa::memory o_AjL =  device.malloc((nic+1)*(njc)*sizeof(double), AjL.data());
+  occa::memory o_U_L =  device.malloc((nic+1)*(njc)*NEQ*sizeof(double), U_L->Q_raw);
+  occa::memory o_U_R =  device.malloc((nic+1)*(njc)*NEQ*sizeof(double), U_R->Q_raw);
+  occa::memory o_F =    device.malloc((nic+1)*(njc)*NEQ*sizeof(double), F->Q_raw);
   
   occa::memory o_xcL = device.malloc((njc)*(nic)*sizeof(double), xcL.data());
   occa::memory o_ycL = device.malloc((njc)*(nic)*sizeof(double), ycL.data());
   occa::memory o_VolumeL = device.malloc((njc)*(nic)*sizeof(double), VolumeL.data());
   occa::memory o_S = device.malloc((njc)*(nic)*NEQ*sizeof(double), S->Q_raw);
   occa::memory o_Res = device.malloc((njc)*(nic)*NEQ*sizeof(double), Res->Q_raw);
- 
-  o_xcL.copyFrom(xcL.data());
+
+  occa::properties props;
+  props["defines/o_NEQ"]=NEQ;
+  props["defines/o_ACCEL"]=ACCEL;
+  props["defines/o_ng"]=C.num_ghost;
+  props["defines/o_rhoid"]=rhoid;
+  props["defines/o_uid"]=uid;
+  props["defines/o_vid"]=vid;
+  props["defines/o_wid"]=wid;
+  props["defines/o_piid"]=piid;
+  props["defines/o_bxid"]=bxid;
+  props["defines/o_byid"]=byid;
+  props["defines/o_bzid"]=bzid;
+  props["defines/o_njc"]=njc;
+  props["defines/o_nic"]=nic;
+  props["defines/o_njc_g"]=njc_g;
+  props["defines/o_nic_g"]=nic_g;
+  props["defines/o_limiter"]=C.f_limiter;
+
+  occa::kernel computeSourceTerm = device.buildKernel("src/mhdRT_f.okl", "computeSourceTerm", props);
+  occa::kernel MUSCL = device.buildKernel("src/mhdRT_f.okl", "MUSCL", props);
+
   device.finish();
-  o_xcL.copyTo(xcL.data());
+
   int n=0;
 
   outputArrayMap(outputFolder, "UL", U, rank);
@@ -171,7 +191,7 @@ int main(int argc, char *argv[]){
   if(rank == 0)
     cout << " Entering Time Loop " << endl;
 
-  while(time(0, n) < tend )//&& n < 60)
+  while(time(0, n) < tend && n < 1)
   {
     for (int k = 0; k < RKORDER; k++)
     {
@@ -182,15 +202,34 @@ int main(int argc, char *argv[]){
       MPI_Barrier(com2d);
 
       // copy to gpu
-      o_U.copyFrom(U);
+      o_U.copyFrom(U->Q_raw);
 
       t = clock();
-      computeSourceTerm(S, U_RK, xcL, ycL, C);
+      //computeSourceTerm(S, U_RK, xcL, ycL, C);
+      computeSourceTerm(o_S, o_U, o_xcL, o_ycL);
+      //device.finish();
+      //device.finish();
+      o_S.copyTo(S->Q_raw);
+
       t = clock()-t;
       avgT[1] =  ((float)t)/CLOCKS_PER_SEC;
 
       t = clock();
-      MUSCL(U_L, U_R, U_B, U_T, U_RK, C);
+
+      MUSCL(o_U_L, o_U_R, o_U_B, o_U_T, o_U_RK);
+      device.finish();
+      o_U_L.copyTo(U_L->Q_raw);
+      o_U_R.copyTo(U_R->Q_raw);
+      o_U_B.copyTo(U_B->Q_raw);
+      o_U_T.copyTo(U_T->Q_raw);
+
+      /*
+      cout << U->Q[rhoid] << endl; 
+      cout << U_L->Q[rhoid] << endl; 
+      cout << U_R->Q[rhoid] << endl; 
+      cout << U_B->Q[rhoid] << endl; 
+      cout << U_T->Q[rhoid] << endl; 
+      */
       t = clock()-t;
       avgT[2] =  ((float)t)/CLOCKS_PER_SEC;
 

@@ -123,12 +123,12 @@ void computeFluxHLLD(double F[], double UL[], double UR[], double& nxhat, double
 double computeMaxSpeed(double V[], int ForG); 
 
 
-void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T, const Map2Eigen* U, constants C);
+//void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T, const Map2Eigen* U, constants C);
 
 
 double SIGN(double a, double b);
 
-double limiter(double& r, constants C);
+//void limiter(occa::memory &theta, occa::memory &r, const int* lim);
 
 
 void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L , Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T, RowMajorMatrixXd& njx, RowMajorMatrixXd& njy, RowMajorMatrixXd& nix, RowMajorMatrixXd& niy, constants C);
@@ -139,7 +139,7 @@ void fFlux(double F[], double U[], double nxhat, double nyhat);
 
 void gFlux(double G[], double U[], double nxhat, double nyhat);
 
-void computeSourceTerm(Map2Eigen* S, Map2Eigen* U, const RowMajorMatrixXd& xc, const RowMajorMatrixXd& yc, constants C);
+//void computeSourceTerm(Map2Eigen* S, Map2Eigen* U, const RowMajorMatrixXd& xc, const RowMajorMatrixXd& yc, constants C);
 
 
 void computeRes(Map2Eigen* Res, const Map2Eigen* S, const Map2Eigen* F, const Map2Eigen* G, const RowMajorMatrixXd& Aj, const RowMajorMatrixXd& Ai, const RowMajorMatrixXd& Volume, constants C);

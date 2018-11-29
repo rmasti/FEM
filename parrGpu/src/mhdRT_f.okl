@@ -1,0 +1,381 @@
+@kernel void computeSourceTerm(
+        double* S, 
+        const double* U, 
+        const double* xc, 
+        const double* yc)
+{
+  int ig, jg;
+  double thet; 
+  double g=o_ACCEL;// 0.1;
+  double su, sv; 
+  double rho;
+  for(int j = 0; j < o_njc; j++; @outer(0))
+  {
+    jg = j + o_ng;
+    for(int i = 0; i < o_nic; i++; @inner(0))
+    {
+      ig = i + o_ng;
+      thet = atan2(yc[j*o_nic+i], xc[j*o_nic+i]);
+      rho = U[(jg*o_nic_g+ig)*o_NEQ+o_rhoid];
+      su = -1*(rho)*(o_ACCEL)*cos(thet);
+      sv = -1*(rho)*(o_ACCEL)*sin(thet);
+      S[(j*o_nic+i)*o_NEQ+o_piid]= ((su*(-1)*g*cos(thet)) + (sv*(-1)*g*sin(thet)));
+      S[(j*o_nic+i)*o_NEQ+o_uid] = su;
+      S[(j*o_nic+i)*o_NEQ+o_vid] = sv;
+      //cout << rho << " " << o_ACCEL  << endl;
+    }
+  }
+}
+
+
+@kernel void MUSCL(double* U_L, 
+        double* U_R, 
+        double* U_B, 
+        double* U_T,
+        const double* U)
+{
+
+
+  int ni = o_nic; //ncx
+  int nj = o_njc;//ncy
+
+  int ig, jg;
+  double theta_L, theta_B, theta_R, theta_T;
+  double denom_L, denom_B, denom_R, denom_T;
+  double r_L, r_B, r_R, r_T;
+  double ul, ull, ur, ut, ub, ubb, uc;
+  double delta = 1.0e-6;
+  double theta[2];
+  double r[2];
+  
+
+  // loop over left and right
+  for(int j = 0; j < nj; j++; @outer(0))
+  {
+    jg = j+o_ng;
+    for(int i = 0; i <= ni; i++; @outer(0))
+    {
+      ig = i+o_ng;
+      for(int eq = 0; eq < o_NEQ; eq++; @inner(0))
+      {
+        ul = U[(jg*o_nic_g+(ig-1))*o_NEQ+eq];
+        ull = U[(jg*o_nic_g+(ig-2))*o_NEQ+eq];
+        ur = U[(jg*o_nic_g+(ig+1))*o_NEQ+eq];
+        uc = U[(jg*o_nic_g+ig)*o_NEQ+eq];
+
+        denom_L = uc - ul;
+        denom_R = ur - ul;        
+        denom_L = copysign(1.0,denom_L)*fmax(delta, fabs(denom_L));    
+        denom_R = copysign(1.0,denom_R)*fmax(delta, fabs(denom_R));    
+
+        r[0] = (ul - ull)/denom_L;
+        r[1] = (uc - ul)/denom_R;
+        switch (o_limiter)
+        {
+          case 1:
+            for(int id = 0; id < 2; id++)
+              theta[id] = 1.0;
+          case 2:
+            for(int id = 0; id < 2; id++)
+              theta[id] = (r[id]+fabs(r[id]))/(1.0+fabs(r[id]));
+          case 3:
+            for(int id = 0; id < 2; id++)
+              theta[id] = (r[id]+r[id]*r[id])/(1.0+r[id]*r[id]);
+          case 4:
+            for(int id = 0; id < 2; id++)
+              theta[id] = 1.5*(r[id]*r[id] + r[id]) / (1.0 + r[id] + r[id]*r[id]);
+          case 5:
+            for(int id = 0; id < 2; id++)
+              theta[id] = fmax(0.0,fmin(2.0*r[id],fmin(0.5*(1.0+r[id]),2.0)));
+          case 6:
+            for(int id = 0; id < 2; id++)
+              theta[id] = fmax(0.0,fmin(1.0,r[id]));
+          case 7:
+            for(int id = 0; id < 2; id++)
+              theta[id] = fmax(0.0,fmax(fmin(2.0*r[id],1),fmin(r[id],2.0)));
+        }
+
+        theta_L=theta[0];
+        theta_R=theta[1];
+
+        int fill = (j*(ni+1)+i)*o_NEQ+eq;
+
+        U_R[fill] = uc - 0.5*theta_R*(ur - uc);
+        U_L[fill] = ul + 0.5*theta_L*(uc - ul);
+
+      }
+    }
+  }
+
+  // loop over bot and top
+  for(int j = 0; j <= nj; j++; @outer(1))
+  {
+    jg = j+o_ng;
+    for(int i = 0; i < ni; i++; @outer(1))
+    {
+      ig = i+o_ng;
+      for(int eq = 0; eq < o_NEQ; eq++; @inner(1))
+      {
+        uc = U[(jg*o_nic_g+ig)*o_NEQ+eq];
+        ub = U[((jg-1)*o_nic_g+ig)*o_NEQ+eq];
+        ubb = U[((jg-2)*o_nic_g+ig)*o_NEQ+eq];
+        ut = U[((jg+1)*o_nic_g+ig)*o_NEQ+eq];
+
+        denom_B = uc - ub;
+        denom_T = ut - ub;
+        denom_B = copysign(1.0,denom_B)*fmax(delta, fabs(denom_B));    
+        denom_T = copysign(1.0,denom_T)*fmax(delta, fabs(denom_T));    
+
+        r[0] = (ub - ubb)/denom_B;
+        r[1] = (uc - ub)/denom_T;
+        switch (o_limiter)
+        {
+          case 1:
+            for(int id = 0; id < 2; id++)
+              theta[id] = 1.0;
+          case 2:
+            for(int id = 0; id < 2; id++)
+              theta[id] = (r[id]+fabs(r[id]))/(1.0+fabs(r[id]));
+          case 3:
+            for(int id = 0; id < 2; id++)
+              theta[id] = (r[id]+r[id]*r[id])/(1.0+r[id]*r[id]);
+          case 4:
+            for(int id = 0; id < 2; id++)
+              theta[id] = 1.5*(r[id]*r[id] + r[id]) / (1.0 + r[id] + r[id]*r[id]);
+          case 5:
+            for(int id = 0; id < 2; id++)
+              theta[id] = fmax(0.0,fmin(2.0*r[id],fmin(0.5*(1.0+r[id]),2.0)));
+          case 6:
+            for(int id = 0; id < 2; id++)
+              theta[id] = fmax(0.0,fmin(1.0,r[id]));
+          case 7:
+            for(int id = 0; id < 2; id++)
+              theta[id] = fmax(0.0,fmax(fmin(2.0*r[id],1),fmin(r[id],2.0)));
+        }
+
+        theta_B=theta[0];
+        theta_T=theta[1];
+
+        int fill = (j*ni+i)*o_NEQ+eq;
+
+        U_B[fill] = ub + 0.5*theta_B*(uc - ub);
+        U_T[fill] = uc - 0.5*theta_T*(ut - uc);
+
+        if(eq==0){
+            printf("c = %d, b = %d, t = %d, fill = %d\n", 
+                (jg*o_nic_g+ig), 
+                ((jg-1)*o_nic_g+ig), 
+                ((jg+1)*o_nic_g+ig),(j*(ni)+i));
+
+            printf("c = %lf, b = %lf, t = %lf, U_B=%lf, U_T=%lf\n", 
+                uc, ub, ut, U_B[fill], U_T[fill]);
+        }
+
+
+      }
+    }
+  }
+ 
+
+  /*
+  for(int j = 0; j < nj; j++; @outer(0))
+  {
+    jg = j+o_ng;
+    for(int i = 0; i < ni; i++; @outer(0))
+    {
+      ig = i+o_ng;
+      for(int eq=0; eq < o_NEQ; eq++; @inner(0))
+      {
+        // left right
+
+        ul = U[(jg*o_nic_g+(ig-1))*o_NEQ+eq];
+        ull = U[(jg*o_nic_g+(ig-2))*o_NEQ+eq];
+        ur = U[(jg*o_nic_g+(ig+1))*o_NEQ+eq];
+        uc = U[(jg*o_nic_g+ig)*o_NEQ+eq];
+        ub = U[((jg-1)*o_nic_g+ig)*o_NEQ+eq];
+        ubb = U[((jg-2)*o_nic_g+ig)*o_NEQ+eq];
+        ut = U[((jg+1)*o_nic_g+ig)*o_NEQ+eq];
+
+        denom_L = uc - ul;
+        denom_R = ur - ul;        
+        denom_L = copysign(1.0,denom_L)*fmax(delta, fabs(denom_L));    
+        denom_R = copysign(1.0,denom_R)*fmax(delta, fabs(denom_R));    
+
+        denom_B = uc - ub;
+        denom_T = ut - ub;
+        denom_B = copysign(1.0,denom_B)*fmax(delta, fabs(denom_B));    
+        denom_T = copysign(1.0,denom_T)*fmax(delta, fabs(denom_T));    
+
+        r[0] = (ub - ubb)/denom_B;
+        r[1] = (uc - ub)/denom_T;
+        r[2] = (ul - ull)/denom_L;
+        r[3] = (uc - ul)/denom_R;
+
+        switch (o_limiter)
+        {
+          case 1:
+            for(int id = 0; id < 4; id++)
+              theta[id] = 1.0;
+          case 2:
+            for(int id = 0; id < 4; id++)
+              theta[id] = (r[id]+fabs(r[id]))/(1.0+fabs(r[id]));
+          case 3:
+            for(int id = 0; id < 4; id++)
+              theta[id] = (r[id]+r[id]*r[id])/(1.0+r[id]*r[id]);
+          case 4:
+            for(int id = 0; id < 4; id++)
+              theta[id] = 1.5*(r[id]*r[id] + r[id]) / (1.0 + r[id] + r[id]*r[id]);
+          case 5:
+            for(int id = 0; id < 4; id++)
+              theta[id] = fmax(0.0,fmin(2.0*r[id],fmin(0.5*(1.0+r[id]),2.0)));
+          case 6:
+            for(int id = 0; id < 4; id++)
+              theta[id] = fmax(0.0,fmin(1.0,r[id]));
+          case 7:
+            for(int id = 0; id < 4; id++)
+              theta[id] = fmax(0.0,fmax(fmin(2.0*r[id],1),fmin(r[id],2.0)));
+        }
+        
+        theta_B=theta[0];
+        theta_T=theta[1];
+        theta_L=theta[2];
+        theta_R=theta[3];
+
+        int fill = (j*ni+i)*o_NEQ+eq;
+
+        U_R[fill] = uc - 0.5*theta_R*(ur - uc);
+        U_L[fill] = ul + 0.5*theta_L*(uc - ul);
+        U_T[fill] = uc - 0.5*theta_T*(ut - uc);
+        U_B[fill] = ub + 0.5*theta_B*(uc - ub);
+
+        if(eq==0){
+            printf("l = %d, c = %d, b = %d, r = %d, t = %d, fill = %d\n", 
+                (jg*o_nic_g+(ig-1)),
+                (jg*o_nic_g+ig), 
+                ((jg-1)*o_nic_g+ig), 
+                (jg*o_nic_g+(ig+1)),
+                ((jg+1)*o_nic_g+ig),(j*(ni-1)+i));
+
+            printf("l = %lf, c = %lf, b = %lf, r = %lf, t = %lf, U_L=%lf, U_R=%lf\n", 
+                ul, uc, ub, ur, ut, U_L[fill], U_R[fill]);
+        }
+
+
+
+ 
+        //U_R->Q[eq](j,i) = (U->Q[eq](jg,ig))-0.5*theta_R*((U->Q[eq](jg,ig+1))-(U->Q[eq](jg,ig))); 
+        //U_L->Q[eq](j,i) =  (U->Q[eq](jg,ig-1))+0.5*theta_L*((U->Q[eq](jg,ig))-(U->Q[eq](jg,ig-1)));
+        //U_T->Q[eq](j,i) = (U->Q[eq](jg,ig))+0.5*theta_T*((U->Q[eq](jg+1,ig))-(U->Q[eq](jg,ig)));
+        //U_B->Q[eq](j,i) =  (U->Q[eq](jg-1,ig))+0.5*theta_B*((U->Q[eq](jg,ig))-(U->Q[eq](jg-1,ig)));
+      }
+    }
+  }
+
+  // add the last layer left right
+  for(int j = 0; j < nj; j++; @outer(1))
+  {
+    ig = ni+o_ng;
+    jg = j+o_ng;
+    for(int eq = 0; eq < o_NEQ; eq++; @inner(2))
+    {
+      uc = U[(jg*o_nic_g+ig)*o_NEQ+eq];
+      ul = U[(jg*o_nic_g+(ig-1))*o_NEQ+eq];
+      ull = U[(jg*o_nic_g+(ig-2))*o_NEQ+eq];
+      ur = U[(jg*o_nic_g+(ig+1))*o_NEQ+eq];
+ 
+      denom_L = uc - ul;
+      denom_R = ur - ul;
+      denom_L = copysign(1,denom_L)*fmax(delta, fabs(denom_L));    
+      denom_R = copysign(1,denom_R)*fmax(delta, fabs(denom_R));    
+      r_L = (ul - ull)/denom_L;
+      r_R = (uc - ul)/denom_R;
+
+      r[0]=r_L;
+      r[1]=r_R;
+      switch (o_limiter)
+      {
+        case 1:
+          for(int id = 0; id < 2; id++)
+            theta[id] = 1.0;
+        case 2:
+          for(int id = 0; id < 2; id++)
+            theta[id] = (r[id]+fabs(r[id]))/(1.0+fabs(r[id]));
+        case 3:
+          for(int id = 0; id < 2; id++)
+            theta[id] = (r[id]+r[id]*r[id])/(1.0+r[id]*r[id]);
+        case 4:
+          for(int id = 0; id < 2; id++)
+            theta[id] = 1.5*(r[id]*r[id] + r[id]) / (1.0 + r[id] + r[id]*r[id]);
+        case 5:
+          for(int id = 0; id < 2; id++)
+            theta[id] = fmax(0.0,fmin(2.0*r[id],fmin(0.5*(1.0+r[id]),2.0)));
+        case 6:
+          for(int id = 0; id < 2; id++)
+            theta[id] = fmax(0.0,fmin(1.0,r[id]));
+        case 7:
+          for(int id = 0; id < 2; id++)
+            theta[id] = fmax(0.0,fmax(fmin(2.0*r[id],1),fmin(r[id],2.0)));
+      } 
+      theta_L = theta[0];
+      theta_R = theta[1];
+
+      int fill = (j*ni + ni)*o_NEQ+eq;
+      U_R[fill] = uc - 0.5*theta_R*(ur - uc);
+      U_L[fill] = ul + 0.5*theta_L*(uc - ul);
+    }
+  }
+
+  for(int i = 0; i < ni; i++; @outer(2))
+  {
+    ig = i+o_ng;
+    jg = nj+o_ng;
+    for(int eq = 0; eq < o_NEQ; eq++; @inner(2))
+    {
+      uc = U[(jg*o_nic_g+ig)*o_NEQ+eq];
+      ub = U[((jg-1)*o_nic_g+ig)*o_NEQ+eq];
+      ubb = U[((jg-2)*o_nic_g+ig)*o_NEQ+eq];
+      ut = U[((jg+1)*o_nic_g+ig)*o_NEQ+eq];
+
+      denom_B = uc - ub;
+      denom_T = ut - ub;
+      denom_B = copysign(1,denom_B)*fmax(delta, fabs(denom_B));    
+      denom_T = copysign(1,denom_T)*fmax(delta, fabs(denom_T));    
+      r_B = (ub - ubb)/denom_B;
+      r_T = (uc - ub)/denom_T;
+
+      r[0]=r_B;
+      r[1]=r_T;
+      switch (o_limiter)
+      {
+        case 1:
+          for(int id = 0; id < 2; id++)
+            theta[id] = 1.0;
+        case 2:
+          for(int id = 0; id < 2; id++)
+            theta[id] = (r[id]+fabs(r[id]))/(1.0+fabs(r[id]));
+        case 3:
+          for(int id = 0; id < 2; id++)
+            theta[id] = (r[id]+r[id]*r[id])/(1.0+r[id]*r[id]);
+        case 4:
+          for(int id = 0; id < 2; id++)
+            theta[id] = 1.5*(r[id]*r[id] + r[id]) / (1.0 + r[id] + r[id]*r[id]);
+        case 5:
+          for(int id = 0; id < 2; id++)
+            theta[id] = fmax(0.0,fmin(2.0*r[id],fmin(0.5*(1.0+r[id]),2.0)));
+        case 6:
+          for(int id = 0; id < 2; id++)
+            theta[id] = fmax(0.0,fmin(1.0,r[id]));
+        case 7:
+          for(int id = 0; id < 2; id++)
+            theta[id] = fmax(0.0,fmax(fmin(2.0*r[id],1),fmin(r[id],2.0)));
+      } 
+      theta_B = theta[0];
+      theta_T = theta[1];
+
+      int fill = (nj*ni+i)*o_NEQ+eq;
+      U_T[fill] = uc - 0.5*theta_T*(ut - uc);
+      U_B[fill] = ub + 0.5*theta_B*(uc - ub);
+    }
+  }
+*/
+}

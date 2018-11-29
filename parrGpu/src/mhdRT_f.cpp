@@ -263,20 +263,13 @@ void computeRes(Map2Eigen* Res, const Map2Eigen* S, const Map2Eigen* F, const Ma
           - G->Q[eq](j,i)*Aj(j,i) 
           - S->Q[eq](j,i)*Volume(j  ,i);
 }
-
+/*
 void computeSourceTerm(Map2Eigen* S, Map2Eigen* U, const RowMajorMatrixXd& xc, const RowMajorMatrixXd& yc, constants C)
 {
   int nj = xc.rows();
   int ni = xc.cols();
   int ig, jg;
 
-  /*
-     S->Q[rhoid] = RowMajorMatrixXd::Constant(nj,ni,0.0); // sets all values to rho 
-     S->Q[wid] = RowMajorMatrixXd::Constant(nj,ni,0.0); // sets all values to rho 
-     S->Q[bxid] = RowMajorMatrixXd::Constant(nj,ni,0.0); // sets all values to rho 
-     S->Q[byid] = RowMajorMatrixXd::Constant(nj,ni,0.0); // sets all values to rho 
-     S->Q[bzid] = RowMajorMatrixXd::Constant(nj,ni,0.0); // sets all values to rho 
-     */
   double thet; 
   double g =ACCEL;// 0.1;
   for(int j = 0; j < nj; j++)
@@ -293,6 +286,7 @@ void computeSourceTerm(Map2Eigen* S, Map2Eigen* U, const RowMajorMatrixXd& xc, c
   }
 }
 
+*/
 void compute2dFlux(Map2Eigen* F, Map2Eigen* G,  Map2Eigen* U_L ,  Map2Eigen* U_R,  Map2Eigen* U_B,  Map2Eigen* U_T, RowMajorMatrixXd& njx, RowMajorMatrixXd& njy, RowMajorMatrixXd& nix, RowMajorMatrixXd& niy, constants C)
 {
   int nj = F->Q[rhoid].rows();
@@ -522,9 +516,7 @@ void gFlux(double G[], double U[], double nxhat, double nyhat)
      */
 }
 
-
-
-
+/*
 void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const Map2Eigen* U, constants C)
 {
 
@@ -538,14 +530,12 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
   double r_L, r_B, r_R, r_T;
   double delta = 1.0e-6;
 
-  /*
      printf("\n nj = %d, ni = %d \n", nj, ni);
      printf("\n nj = %ld, ni = %ld \n", U_B->Q[rhoid].rows() , U_B->Q[rhoid].cols());
      printf("\n nj = %ld, ni = %ld \n", U_R->Q[rhoid].rows(), U_R->Q[rhoid].cols());
      printf("\n nj = %ld, ni = %ld \n", U_L->Q[rhoid].rows(), U_L->Q[rhoid].cols());
      printf("\n nj = %ld, ni = %ld \n", U_T->Q[rhoid].rows(), U_T->Q[rhoid].cols());
      printf("\n nj = %ld, ni = %ld \n", U->Q[rhoid].rows(), U->Q[rhoid].cols());
-     */
   for(int j = 0; j < nj; j++)
   {
     for(int i = 0; i < ni; i++)
@@ -606,9 +596,7 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
       theta_R = limiter(r_R, C);
 
       U_L->Q[eq](j, ni) =  U->Q[eq](jg,ig-1)+0.5*theta_L*(U->Q[eq](jg,ig)-U->Q[eq](jg,ig-1));
-      U_R->Q[eq](j, ni) = U->Q[eq](jg,ig)-0.5*theta_R*(U->Q[eq](jg,ig+1)-U->Q[eq](jg,ig));             
-    }
-  }
+      U_R->Q[eq](j, ni) = U->Q[eq](jg,ig)-0.5*theta_R*(U->Q[eq](jg,ig+1)-U->Q[eq](jg,ig));             } }
   // add the last layer top bottom
   for(int i = 0; i < ni; i++)
   {
@@ -630,12 +618,12 @@ void MUSCL(Map2Eigen* U_L, Map2Eigen* U_R, Map2Eigen* U_B, Map2Eigen* U_T,const 
     }
   }
 }
+*/
 
-
-double limiter(double& r, constants C)
+/*
+void limiter(occa::memory& theta, occa::memory& r, const int* lim)
 {
-  double theta;
-  switch (C.f_limiter)
+  switch (lim)
   {
     case 1:
       theta = 1.0;
@@ -652,9 +640,8 @@ double limiter(double& r, constants C)
     case 7:
       theta = mymax(0,mymax(mymin(2.0*r,1),mymin(r,2)));
   }
-  return theta;
 }            
-
+*/
 
 double SIGN(double a, double b)
 {
