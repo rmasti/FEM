@@ -161,6 +161,7 @@
         U_B[fill] = ub + 0.5*theta_B*(uc - ub);
         U_T[fill] = uc - 0.5*theta_T*(ut - uc);
 
+        /*
         if(eq==0){
             printf("c = %d, b = %d, t = %d, fill = %d\n", 
                 (jg*o_nic_g+ig), 
@@ -170,212 +171,110 @@
             printf("c = %lf, b = %lf, t = %lf, U_B=%lf, U_T=%lf\n", 
                 uc, ub, ut, U_B[fill], U_T[fill]);
         }
-
-
+        */
       }
     }
   }
- 
+}
 
-  /*
+@kernel void compute2dFlux(double* F, 
+        double* G,  
+        const double* U_L,  
+        const double* U_R,  
+        const double* U_B,  
+        const double* U_T, 
+        const double* njx, 
+        const double* njy, 
+        const double* nix, 
+        const double* niy)
+{
+  int nj = o_njc;
+  int ni = o_nic;
+  double ul[NEQ], ur[NEQ], ub[NEQ], ut[NEQ];
+  double FFLUX[NEQ];
+  double GFLUX[NEQ];
   for(int j = 0; j < nj; j++; @outer(0))
   {
-    jg = j+o_ng;
     for(int i = 0; i < ni; i++; @outer(0))
+
+
+  }
+/*
+  int nj = F->Q[rhoid].rows();
+  int ni = G->Q[rhoid].cols();
+  double ul[NEQ], ur[NEQ], ub[NEQ], ut[NEQ];
+  double FFLUX[NEQ];
+  double GFLUX[NEQ];
+
+  for(int j = 0; j < nj; j++)
+  {
+    for(int i = 0; i < ni; i++)
     {
-      ig = i+o_ng;
-      for(int eq=0; eq < o_NEQ; eq++; @inner(0))
+      for(int eq = 0; eq < NEQ; eq++)
       {
-        // left right
+        ul[eq] = U_L->Q[eq](j,i);
+        ur[eq] = U_R->Q[eq](j,i);
+        ub[eq] = U_B->Q[eq](j,i);
+        ut[eq] = U_T->Q[eq](j,i);
+      }
 
-        ul = U[(jg*o_nic_g+(ig-1))*o_NEQ+eq];
-        ull = U[(jg*o_nic_g+(ig-2))*o_NEQ+eq];
-        ur = U[(jg*o_nic_g+(ig+1))*o_NEQ+eq];
-        uc = U[(jg*o_nic_g+ig)*o_NEQ+eq];
-        ub = U[((jg-1)*o_nic_g+ig)*o_NEQ+eq];
-        ubb = U[((jg-2)*o_nic_g+ig)*o_NEQ+eq];
-        ut = U[((jg+1)*o_nic_g+ig)*o_NEQ+eq];
+      computeFluxHLL(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
+      computeFluxHLL(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
 
-        denom_L = uc - ul;
-        denom_R = ur - ul;        
-        denom_L = copysign(1.0,denom_L)*fmax(delta, fabs(denom_L));    
-        denom_R = copysign(1.0,denom_R)*fmax(delta, fabs(denom_R));    
+      //computeFluxVL(FFLUX, ul, ur, nix(j,i), niy(j,i));
+      //computeFluxVL(GFLUX, ub, ut, njx(j,i), njy(j,i));
 
-        denom_B = uc - ub;
-        denom_T = ut - ub;
-        denom_B = copysign(1.0,denom_B)*fmax(delta, fabs(denom_B));    
-        denom_T = copysign(1.0,denom_T)*fmax(delta, fabs(denom_T));    
+      //computeFluxRoe(FFLUX, ul, ur, nix(j,i), niy(j,i));
+      //computeFluxRoe(GFLUX, ub, ut, njx(j,i), njy(j,i));
 
-        r[0] = (ub - ubb)/denom_B;
-        r[1] = (uc - ub)/denom_T;
-        r[2] = (ul - ull)/denom_L;
-        r[3] = (uc - ul)/denom_R;
-
-        switch (o_limiter)
-        {
-          case 1:
-            for(int id = 0; id < 4; id++)
-              theta[id] = 1.0;
-          case 2:
-            for(int id = 0; id < 4; id++)
-              theta[id] = (r[id]+fabs(r[id]))/(1.0+fabs(r[id]));
-          case 3:
-            for(int id = 0; id < 4; id++)
-              theta[id] = (r[id]+r[id]*r[id])/(1.0+r[id]*r[id]);
-          case 4:
-            for(int id = 0; id < 4; id++)
-              theta[id] = 1.5*(r[id]*r[id] + r[id]) / (1.0 + r[id] + r[id]*r[id]);
-          case 5:
-            for(int id = 0; id < 4; id++)
-              theta[id] = fmax(0.0,fmin(2.0*r[id],fmin(0.5*(1.0+r[id]),2.0)));
-          case 6:
-            for(int id = 0; id < 4; id++)
-              theta[id] = fmax(0.0,fmin(1.0,r[id]));
-          case 7:
-            for(int id = 0; id < 4; id++)
-              theta[id] = fmax(0.0,fmax(fmin(2.0*r[id],1),fmin(r[id],2.0)));
-        }
-        
-        theta_B=theta[0];
-        theta_T=theta[1];
-        theta_L=theta[2];
-        theta_R=theta[3];
-
-        int fill = (j*ni+i)*o_NEQ+eq;
-
-        U_R[fill] = uc - 0.5*theta_R*(ur - uc);
-        U_L[fill] = ul + 0.5*theta_L*(uc - ul);
-        U_T[fill] = uc - 0.5*theta_T*(ut - uc);
-        U_B[fill] = ub + 0.5*theta_B*(uc - ub);
-
-        if(eq==0){
-            printf("l = %d, c = %d, b = %d, r = %d, t = %d, fill = %d\n", 
-                (jg*o_nic_g+(ig-1)),
-                (jg*o_nic_g+ig), 
-                ((jg-1)*o_nic_g+ig), 
-                (jg*o_nic_g+(ig+1)),
-                ((jg+1)*o_nic_g+ig),(j*(ni-1)+i));
-
-            printf("l = %lf, c = %lf, b = %lf, r = %lf, t = %lf, U_L=%lf, U_R=%lf\n", 
-                ul, uc, ub, ur, ut, U_L[fill], U_R[fill]);
-        }
+      //computeFluxHLLD(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
+      //computeFluxHLLD(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
 
 
 
- 
-        //U_R->Q[eq](j,i) = (U->Q[eq](jg,ig))-0.5*theta_R*((U->Q[eq](jg,ig+1))-(U->Q[eq](jg,ig))); 
-        //U_L->Q[eq](j,i) =  (U->Q[eq](jg,ig-1))+0.5*theta_L*((U->Q[eq](jg,ig))-(U->Q[eq](jg,ig-1)));
-        //U_T->Q[eq](j,i) = (U->Q[eq](jg,ig))+0.5*theta_T*((U->Q[eq](jg+1,ig))-(U->Q[eq](jg,ig)));
-        //U_B->Q[eq](j,i) =  (U->Q[eq](jg-1,ig))+0.5*theta_B*((U->Q[eq](jg,ig))-(U->Q[eq](jg-1,ig)));
+      for(int eq = 0; eq < NEQ; eq++)
+      {
+        F->Q[eq](j,i) = FFLUX[eq];
+        G->Q[eq](j,i) = GFLUX[eq];
       }
     }
   }
 
-  // add the last layer left right
-  for(int j = 0; j < nj; j++; @outer(1))
+  // fix right wall
+  for(int j = 0; j < nj; j++)
   {
-    ig = ni+o_ng;
-    jg = j+o_ng;
-    for(int eq = 0; eq < o_NEQ; eq++; @inner(2))
+    for(int eq = 0; eq < NEQ; eq++)
     {
-      uc = U[(jg*o_nic_g+ig)*o_NEQ+eq];
-      ul = U[(jg*o_nic_g+(ig-1))*o_NEQ+eq];
-      ull = U[(jg*o_nic_g+(ig-2))*o_NEQ+eq];
-      ur = U[(jg*o_nic_g+(ig+1))*o_NEQ+eq];
- 
-      denom_L = uc - ul;
-      denom_R = ur - ul;
-      denom_L = copysign(1,denom_L)*fmax(delta, fabs(denom_L));    
-      denom_R = copysign(1,denom_R)*fmax(delta, fabs(denom_R));    
-      r_L = (ul - ull)/denom_L;
-      r_R = (uc - ul)/denom_R;
+      ul[eq] = U_L->Q[eq](j,ni);
+      ur[eq] = U_R->Q[eq](j,ni);
 
-      r[0]=r_L;
-      r[1]=r_R;
-      switch (o_limiter)
-      {
-        case 1:
-          for(int id = 0; id < 2; id++)
-            theta[id] = 1.0;
-        case 2:
-          for(int id = 0; id < 2; id++)
-            theta[id] = (r[id]+fabs(r[id]))/(1.0+fabs(r[id]));
-        case 3:
-          for(int id = 0; id < 2; id++)
-            theta[id] = (r[id]+r[id]*r[id])/(1.0+r[id]*r[id]);
-        case 4:
-          for(int id = 0; id < 2; id++)
-            theta[id] = 1.5*(r[id]*r[id] + r[id]) / (1.0 + r[id] + r[id]*r[id]);
-        case 5:
-          for(int id = 0; id < 2; id++)
-            theta[id] = fmax(0.0,fmin(2.0*r[id],fmin(0.5*(1.0+r[id]),2.0)));
-        case 6:
-          for(int id = 0; id < 2; id++)
-            theta[id] = fmax(0.0,fmin(1.0,r[id]));
-        case 7:
-          for(int id = 0; id < 2; id++)
-            theta[id] = fmax(0.0,fmax(fmin(2.0*r[id],1),fmin(r[id],2.0)));
-      } 
-      theta_L = theta[0];
-      theta_R = theta[1];
-
-      int fill = (j*ni + ni)*o_NEQ+eq;
-      U_R[fill] = uc - 0.5*theta_R*(ur - uc);
-      U_L[fill] = ul + 0.5*theta_L*(uc - ul);
     }
+
+    computeFluxHLL(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
+    //computeFluxVL(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
+    //computeFluxRoe(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
+    //computeFluxHLLD(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
+    for(int eq = 0; eq < NEQ; eq++)
+      F->Q[eq](j,ni) = FFLUX[eq];
   }
+  // fix left wall
 
-  for(int i = 0; i < ni; i++; @outer(2))
+  for(int i = 0; i < ni; i++)
   {
-    ig = i+o_ng;
-    jg = nj+o_ng;
-    for(int eq = 0; eq < o_NEQ; eq++; @inner(2))
+    for(int eq = 0; eq < NEQ; eq++)
     {
-      uc = U[(jg*o_nic_g+ig)*o_NEQ+eq];
-      ub = U[((jg-1)*o_nic_g+ig)*o_NEQ+eq];
-      ubb = U[((jg-2)*o_nic_g+ig)*o_NEQ+eq];
-      ut = U[((jg+1)*o_nic_g+ig)*o_NEQ+eq];
+      ub[eq] = U_B->Q[eq](nj,i);
+      ut[eq] = U_T->Q[eq](nj,i);
 
-      denom_B = uc - ub;
-      denom_T = ut - ub;
-      denom_B = copysign(1,denom_B)*fmax(delta, fabs(denom_B));    
-      denom_T = copysign(1,denom_T)*fmax(delta, fabs(denom_T));    
-      r_B = (ub - ubb)/denom_B;
-      r_T = (uc - ub)/denom_T;
-
-      r[0]=r_B;
-      r[1]=r_T;
-      switch (o_limiter)
-      {
-        case 1:
-          for(int id = 0; id < 2; id++)
-            theta[id] = 1.0;
-        case 2:
-          for(int id = 0; id < 2; id++)
-            theta[id] = (r[id]+fabs(r[id]))/(1.0+fabs(r[id]));
-        case 3:
-          for(int id = 0; id < 2; id++)
-            theta[id] = (r[id]+r[id]*r[id])/(1.0+r[id]*r[id]);
-        case 4:
-          for(int id = 0; id < 2; id++)
-            theta[id] = 1.5*(r[id]*r[id] + r[id]) / (1.0 + r[id] + r[id]*r[id]);
-        case 5:
-          for(int id = 0; id < 2; id++)
-            theta[id] = fmax(0.0,fmin(2.0*r[id],fmin(0.5*(1.0+r[id]),2.0)));
-        case 6:
-          for(int id = 0; id < 2; id++)
-            theta[id] = fmax(0.0,fmin(1.0,r[id]));
-        case 7:
-          for(int id = 0; id < 2; id++)
-            theta[id] = fmax(0.0,fmax(fmin(2.0*r[id],1),fmin(r[id],2.0)));
-      } 
-      theta_B = theta[0];
-      theta_T = theta[1];
-
-      int fill = (nj*ni+i)*o_NEQ+eq;
-      U_T[fill] = uc - 0.5*theta_T*(ut - uc);
-      U_B[fill] = ub + 0.5*theta_B*(uc - ub);
     }
+    computeFluxHLL(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
+    //computeFluxVL(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
+    //computeFluxRoe(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
+    //computeFluxHLLD(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
+    for(int eq = 0; eq < NEQ; eq++)
+      G->Q[eq](nj,i) = GFLUX[eq];
   }
 */
 }
+
+
