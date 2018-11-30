@@ -14,6 +14,7 @@ int main(int argc, char *argv[]){
   double A = (2-1)/(1.0+2.0);
   double tend = 6.0/sqrt(A*ACCEL*2);
   double dt;
+  //occa::umalloc(sizeof(double), &dt);
   MatrixXd time(1, C.nmax);
 
   int rank, size;
@@ -132,8 +133,10 @@ int main(int argc, char *argv[]){
   
   printf("total gb loaded onto gpu: tot = %lf\n", bytes*1.0e-9);
 
+  
   occa::device device;
   device.setup("mode: 'CUDA', device_id : 0"); 
+
 
   occa::memory o_U = device.malloc(njc_g*nic_g*NEQ*sizeof(double), U->Q_raw);
   occa::memory o_U_RK = device.malloc(njc_g*nic_g*NEQ*sizeof(double), U_RK->Q_raw);
@@ -158,6 +161,9 @@ int main(int argc, char *argv[]){
   occa::memory o_S = device.malloc((njc)*(nic)*NEQ*sizeof(double), S->Q_raw);
   occa::memory o_Res = device.malloc((njc)*(nic)*NEQ*sizeof(double), Res->Q_raw);
 
+
+  // memory needed for rk staging
+
   occa::properties props;
   props["defines/o_NEQ"]=NEQ;
   props["defines/o_ACCEL"]=ACCEL;
@@ -175,15 +181,19 @@ int main(int argc, char *argv[]){
   props["defines/o_njc_g"]=njc_g;
   props["defines/o_nic_g"]=nic_g;
   props["defines/o_limiter"]=C.f_limiter;
-  props["defines/o_limiter"]=C.f_limiter;
   props["defines/o_gamma"]=GAMMA;
   props["defines/o_mu0"]=MU0;
+  props["defines/o_rkorder"]=RKORDER;
 
-  props["includes/"]+="include/muscl.hpp";
+  //props["includes/"]+="include/muscl.hpp";
 
+  //occa::kernel occaMap2eigen = device.buildKernel("test/occaMap2Eigen.okl", "occaMap2Eigen");//, props);
   occa::kernel computeSourceTerm = device.buildKernel("src/mhdRT_f.okl", "computeSourceTerm", props);
+#if 0
   occa::kernel MUSCL = device.buildKernel("src/mhdRT_f.okl", "MUSCL", props);
   occa::kernel compute2dFlux = device.buildKernel("src/mhdRT_f.okl", "compute2dFlux", props);
+  occa::kernel computeRes = device.buildKernel("src/mhdRT_f.okl", "computeRes", props);
+  occa::kernel rungeKutta = device.buildKernel("src/mhdRT_f.okl", "rungeKutta", props);
 
   device.finish();
 
@@ -215,7 +225,7 @@ int main(int argc, char *argv[]){
       computeSourceTerm(o_S, o_U, o_xcL, o_ycL);
       //device.finish();
       //device.finish();
-      o_S.copyTo(S->Q_raw);
+      //o_S.copyTo(S->Q_raw);
 
       t = clock()-t;
       avgT[1] =  ((float)t)/CLOCKS_PER_SEC;
@@ -224,40 +234,47 @@ int main(int argc, char *argv[]){
 
       MUSCL(o_U_L, o_U_R, o_U_B, o_U_T, o_U_RK);
       device.finish();
-      o_U_L.copyTo(U_L->Q_raw);
-      o_U_R.copyTo(U_R->Q_raw);
-      o_U_B.copyTo(U_B->Q_raw);
-      o_U_T.copyTo(U_T->Q_raw);
+      //o_U_L.copyTo(U_L->Q_raw);
+      //o_U_R.copyTo(U_R->Q_raw);
+      //o_U_B.copyTo(U_B->Q_raw);
+      //o_U_T.copyTo(U_T->Q_raw);
 
-      /*
-      cout << U->Q[rhoid] << endl; 
-      cout << U_L->Q[rhoid] << endl; 
-      cout << U_R->Q[rhoid] << endl; 
-      cout << U_B->Q[rhoid] << endl; 
-      cout << U_T->Q[rhoid] << endl; 
-      */
+      //cout << U->Q[rhoid] << endl; 
+      //cout << U_L->Q[rhoid] << endl; 
+      //cout << U_R->Q[rhoid] << endl; 
+      //cout << U_B->Q[rhoid] << endl; 
+      //cout << U_T->Q[rhoid] << endl; 
 
       t = clock()-t;
       avgT[2] =  ((float)t)/CLOCKS_PER_SEC;
 
       t = clock();
       compute2dFlux(o_F, o_G, o_U_L, o_U_R, o_U_B, o_U_T, o_njxL, o_njyL, o_nixL, o_niyL);
-      o_F.copyTo(F->Q_raw);
-      o_G.copyTo(G->Q_raw);
-
-      cout << F->Q[rhoid] << endl;
-      cout << G->Q[rhoid] << endl;
+      device.finish();
+      //o_F.copyTo(F->Q_raw);
+      //o_G.copyTo(G->Q_raw);
+      //cout << F->Q[rhoid] << endl;
+      //cout << G->Q[rhoid] << endl;
 
       t = clock()-t;
       avgT[3] =  ((float)t)/CLOCKS_PER_SEC;
 
       t = clock();
-      computeRes(Res, S, F, G, AjL, AiL, VolumeL, C);
+      //computeRes(Res, S, F, G, AjL, AiL, VolumeL, C);
+      computeRes(o_Res, o_S, o_F, o_G, o_AjL, o_AiL, o_VolumeL);
+      o_Res.copyTo(Res->Q_raw);
+      //cout << Res->Q[rhoid] << endl;
+
       t = clock()-t;
       avgT[4] =  ((float)t)/CLOCKS_PER_SEC;
 
       t = clock();
-      rungeKutta(U_RK, U, Res, VolumeL, k, dt, C);
+      //rungeKutta(U_RK, U, Res, VolumeL, k, dt, C);
+      //o_dt.copyFrom(*dt);
+      //o_k.copyFrom(*k);
+      rungeKutta(o_U_RK, o_U, o_Res, o_VolumeL, k, dt);
+      o_U_RK.copyTo(U_RK->Q_raw);
+
       t = clock()-t;
       avgT[5] =  ((float)t)/CLOCKS_PER_SEC;
     }
@@ -295,7 +312,7 @@ int main(int argc, char *argv[]){
   }
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
   //outputArrayMap(outputFolder, "UL", U, rank);
-
+#endif
   MPI_Finalize();
   return 0;
 }

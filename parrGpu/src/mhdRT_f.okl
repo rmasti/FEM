@@ -190,17 +190,12 @@
 {
   int nj = o_njc;
   int ni = o_nic;
-  double ul[o_NEQ], ur[o_NEQ], ub[o_NEQ], ut[o_NEQ];
-  double vl[o_NEQ], vr[o_NEQ];
-  double FA[o_NEQ], FB[o_NEQ];
-  double FFLUX[o_NEQ];
-  double GFLUX[o_NEQ];
-  double rho, u, v, w, bx, by, bz, p;
 
   for(int j = 0; j < nj; j++; @outer(0))
   {
     for(int i = 0; i <= ni; i++; @outer(1))
     {
+      double ul[o_NEQ], ur[o_NEQ];
       int ido = j*(ni+1)+i;
       for(int eq = 0; eq < o_NEQ; eq++; @inner(0))
       {
@@ -208,7 +203,8 @@
         ul[eq] = U_L[id];
         ur[eq] = U_R[id];
       }
-      
+      double vl[o_NEQ], vr[o_NEQ];
+      // convert to prim form
       vl[o_rhoid] = ul[o_rhoid];
       vl[o_uid] = ul[o_uid]/ul[o_rhoid];
       vl[o_vid] = ul[o_vid]/ul[o_rhoid];
@@ -224,11 +220,13 @@
       vl[o_byid] = ul[o_byid];
       vl[o_bzid] = ul[o_bzid];
 
+      // calc max speed
       double ca = sqrt(ul[o_bxid]*ul[o_bxid]+ul[o_byid]*ul[o_byid]+ul[o_bzid]*ul[o_bzid]);
       double cs = sqrt(vl[o_piid]*o_gamma/ul[o_rhoid]);// p gamma/rho
       double cadir = ul[o_bxid]*ul[o_bxid]/(o_mu0*ul[o_rhoid]);
       double CA =sqrt(0.5*(ca*ca+cs*cs+sqrt((ca*ca+cs*cs)*(ca*ca+cs*cs)-4*cs*cs*cadir*cadir)));
 
+      // grab right state
       vr[o_rhoid] = ur[o_rhoid];
       vr[o_uid] = ur[o_uid]/ur[o_rhoid];
       vr[o_vid] = ur[o_vid]/ur[o_rhoid];
@@ -244,19 +242,24 @@
       vr[o_byid] = ur[o_byid];
       vr[o_bzid] = ur[o_bzid];
 
+      // calc max speed // ca dir is in x dir
       ca = sqrt(ur[o_bxid]*ur[o_bxid]+ur[o_byid]*ur[o_byid]+ur[o_bzid]*ur[o_bzid]);
       cs = sqrt(vr[o_piid]*o_gamma/ur[o_rhoid]);// p gamma/rho
-      cadir = ur[o_byid]*ur[o_byid]/(o_mu0*ur[o_rhoid]);
+      cadir = ur[o_bxid]*ur[o_bxid]/(o_mu0*ur[o_rhoid]);
       double CB =sqrt(0.5*(ca*ca+cs*cs+sqrt((ca*ca+cs*cs)*(ca*ca+cs*cs)-4*cs*cs*cadir*cadir)));
 
+      // calculate normal vector wave speed 
       double u_A = (ul[o_uid]*nix[ido]+ul[o_vid]*niy[ido])/ul[o_rhoid];
       double u_B = (ur[o_uid]*nix[ido]+ur[o_vid]*niy[ido])/ur[o_rhoid];
       double b_A = (ul[o_bxid]*nix[ido]+ul[o_byid]*niy[ido])/ul[o_rhoid];
       double b_B = (ur[o_bxid]*nix[ido]+ur[o_byid]*niy[ido])/ur[o_rhoid];
 
+      // calculate max and min eigen values
       double lambdaA = fmin(u_A, u_B) - fmax(CA, CB);
       double lambdaB = fmax(u_A, u_B) + fmax(CA, CB);
 
+      // Compute flux state A (left)
+      double FA[o_NEQ], FB[o_NEQ];
       FA[o_rhoid] = vl[o_rhoid]*u_A; 
 
       FA[o_uid] = vl[o_rhoid]*vl[o_uid]*u_A - vl[o_bxid]*b_A/o_mu0 + vl[o_piid]*nix[ido] + (vl[o_bxid]*vl[o_bxid]+vl[o_byid]*vl[o_byid]+vl[o_bzid]*vl[o_bzid])*nix[ido]/(2*o_mu0);
@@ -273,7 +276,8 @@
 
       FA[o_bzid] = u_A*vl[o_bzid]-vl[o_wid]*b_A;
 
-      FB[o_rhoid] = vl[o_rhoid]*u_B; 
+      // Compute flux for state B (right)
+      FB[o_rhoid] = vr[o_rhoid]*u_B; 
 
       FB[o_uid] = vr[o_rhoid]*vr[o_uid]*u_B - vr[o_bxid]*b_B/o_mu0 + vr[o_piid]*nix[ido] + (vr[o_bxid]*vr[o_bxid]+vr[o_byid]*vr[o_byid]+vr[o_bzid]*vr[o_bzid])*nix[ido]/(2*o_mu0);
 
@@ -289,6 +293,7 @@
 
       FB[o_bzid] = u_B*vr[o_bzid]-vr[o_wid]*b_B;
  
+      // Apply hll filtering
       if (lambdaA > 0)
         for(int eq = 0; eq < o_NEQ; eq++)
           F[ido*o_NEQ+eq] = FA[eq];
@@ -308,81 +313,211 @@
       //printf("j = %d, i = %d, j*(ni+1)+i=%d\n", j,i,j*(ni+1)+i);
     }
   }
-/*
-  int nj = F->Q[rhoid].rows();
-  int ni = G->Q[rhoid].cols();
-  double ul[NEQ], ur[NEQ], ub[NEQ], ut[NEQ];
-  double FFLUX[NEQ];
-  double GFLUX[NEQ];
-
-  for(int j = 0; j < nj; j++)
+  // loop for G flux
+  for(int j = 0; j <= nj; j++; @outer(0))
   {
-    for(int i = 0; i < ni; i++)
+    for(int i = 0; i < ni; i++; @outer(1))
     {
-      for(int eq = 0; eq < NEQ; eq++)
+      double ub[o_NEQ], ut[o_NEQ];
+      int ido = j*(ni)+i;
+      for(int eq = 0; eq < o_NEQ; eq++; @inner(0))
       {
-        ul[eq] = U_L->Q[eq](j,i);
-        ur[eq] = U_R->Q[eq](j,i);
-        ub[eq] = U_B->Q[eq](j,i);
-        ut[eq] = U_T->Q[eq](j,i);
+        int id = (ido)*o_NEQ+eq;
+        ub[eq] = U_B[id];
+        ut[eq] = U_T[id];
       }
+      double vb[o_NEQ], vt[o_NEQ];
+      // convert to prim form
+      vb[o_rhoid] = ub[o_rhoid];
+      vb[o_uid] = ub[o_uid]/ub[o_rhoid];
+      vb[o_vid] = ub[o_vid]/ub[o_rhoid];
+      vb[o_wid] = ub[o_wid]/ub[o_rhoid];
+      vb[o_piid] = ((o_gamma - 1.0) *(ub[o_piid]-( 
+          - 0.5*ub[o_uid]*((ub[o_uid])/(ub[o_rhoid])) 
+          - 0.5*ub[o_vid]*((ub[o_vid])/(ub[o_rhoid])) 
+          - 0.5*ub[o_wid]*((ub[o_wid])/(ub[o_rhoid])) 
+          - 0.5*ub[o_bxid]*(ub[o_bxid])/o_mu0
+          - 0.5*ub[o_byid]*(ub[o_byid])/o_mu0
+          - 0.5*ub[o_bzid]*(ub[o_bzid])/o_mu0)));
+      vb[o_bxid] = ub[o_bxid];
+      vb[o_byid] = ub[o_byid];
+      vb[o_bzid] = ub[o_bzid];
 
+      // calc max speed
+      double ca = sqrt(ub[o_bxid]*ub[o_bxid]+ub[o_byid]*ub[o_byid]+ub[o_bzid]*ub[o_bzid]);
+      double cs = sqrt(vb[o_piid]*o_gamma/ub[o_rhoid]);// p gamma/rho
+      double cadir = ub[o_byid]*ub[o_byid]/(o_mu0*ub[o_rhoid]);
+      double CA =sqrt(0.5*(ca*ca+cs*cs+sqrt((ca*ca+cs*cs)*(ca*ca+cs*cs)-4*cs*cs*cadir*cadir)));
 
-      computeFluxHLL(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
-      computeFluxHLL(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
+      // grab right state
+      vt[o_rhoid] = ut[o_rhoid];
+      vt[o_uid] = ut[o_uid]/ut[o_rhoid];
+      vt[o_vid] = ut[o_vid]/ut[o_rhoid];
+      vt[o_wid] = ut[o_wid]/ut[o_rhoid];
+      vt[o_piid] = ((o_gamma - 1.0) *(ut[o_piid]-( 
+          - 0.5*ut[o_uid]*((ut[o_uid])/(ut[o_rhoid])) 
+          - 0.5*ut[o_vid]*((ut[o_vid])/(ut[o_rhoid])) 
+          - 0.5*ut[o_wid]*((ut[o_wid])/(ut[o_rhoid])) 
+          - 0.5*ut[o_bxid]*(ut[o_bxid])/o_mu0
+          - 0.5*ut[o_byid]*(ut[o_byid])/o_mu0
+          - 0.5*ut[o_bzid]*(ut[o_bzid])/o_mu0)));
+      vt[o_bxid] = ut[o_bxid];
+      vt[o_byid] = ut[o_byid];
+      vt[o_bzid] = ut[o_bzid];
 
-      //computeFluxVL(FFLUX, ul, ur, nix(j,i), niy(j,i));
-      //computeFluxVL(GFLUX, ub, ut, njx(j,i), njy(j,i));
+      // calc max speed ca dir in y dir
+      ca = sqrt(ut[o_bxid]*ut[o_bxid]+ut[o_byid]*ut[o_byid]+ut[o_bzid]*ut[o_bzid]);
+      cs = sqrt(vt[o_piid]*o_gamma/ut[o_rhoid]);// p gamma/rho
+      cadir = ut[o_byid]*ut[o_byid]/(o_mu0*ut[o_rhoid]);
+      double CB =sqrt(0.5*(ca*ca+cs*cs+sqrt((ca*ca+cs*cs)*(ca*ca+cs*cs)-4*cs*cs*cadir*cadir)));
 
-      //computeFluxRoe(FFLUX, ul, ur, nix(j,i), niy(j,i));
-      //computeFluxRoe(GFLUX, ub, ut, njx(j,i), njy(j,i));
+      //printf("ido = %d, CB = %lf\n", ido, CA);
+      
+      // calculate normal vector wave speed 
+      double u_A = (ub[o_uid]*njx[ido]+ub[o_vid]*njy[ido])/ub[o_rhoid];
+      double u_B = (ut[o_uid]*njx[ido]+ut[o_vid]*njy[ido])/ut[o_rhoid];
+      double b_A = (ub[o_bxid]*njx[ido]+ub[o_byid]*njy[ido])/ub[o_rhoid];
+      double b_B = (ut[o_bxid]*njx[ido]+ut[o_byid]*njy[ido])/ut[o_rhoid];
 
-      //computeFluxHLLD(FFLUX, ul, ur, nix(j,i), niy(j,i), 0);
-      //computeFluxHLLD(GFLUX, ub, ut, njx(j,i), njy(j,i), 1);
+      // calculate max and min eigen values
+      double lambdaA = fmin(u_A, u_B) - fmax(CA, CB);
+      double lambdaB = fmax(u_A, u_B) + fmax(CA, CB);
 
+      // Compute flux state A (left)
+      double FA[o_NEQ], FB[o_NEQ];
+      FA[o_rhoid] = vb[o_rhoid]*u_A; 
 
+      FA[o_uid] = vb[o_rhoid]*vb[o_uid]*u_A - vb[o_bxid]*b_A/o_mu0 + vb[o_piid]*nix[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*nix[ido]/(2*o_mu0);
 
-      for(int eq = 0; eq < NEQ; eq++)
+      FA[o_vid] = vb[o_rhoid]*u_A*vb[o_vid]- b_A*vb[o_byid]/o_mu0 + vb[o_piid]*niy[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*niy[ido]/(2*o_mu0);
+
+      FA[o_wid] = vb[o_rhoid]*u_A*vb[o_wid] - b_A*vb[o_bzid]/o_mu0;
+
+      FA[o_piid] = (ub[o_piid]+vb[o_piid]+0.5*(1/o_mu0)*(vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid]))*u_A - (1/o_mu0)*b_A*(vb[o_uid]*vb[o_bxid]+vb[o_vid]*vb[o_byid]+vb[o_wid]*vb[o_bzid]);
+
+      FA[o_bxid] = u_A*vb[o_bxid]-vb[o_uid]*b_A;
+
+      FA[o_byid] = u_A*vb[o_byid]-vb[o_vid]*b_A;
+
+      FA[o_bzid] = u_A*vb[o_bzid]-vb[o_wid]*b_A;
+
+      // Compute flux for state B (right)
+      FB[o_rhoid] = vb[o_rhoid]*u_B; 
+
+      FB[o_uid] = vb[o_rhoid]*vb[o_uid]*u_B - vb[o_bxid]*b_B/o_mu0 + vb[o_piid]*nix[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*nix[ido]/(2*o_mu0);
+
+      FB[o_vid] = vb[o_rhoid]*u_B*vb[o_vid]- b_B*vb[o_byid]/o_mu0 + vb[o_piid]*niy[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*niy[ido]/(2*o_mu0);
+
+      FB[o_wid] = vb[o_rhoid]*u_B*vb[o_wid] - b_B*vb[o_bzid]/o_mu0;
+
+      FB[o_piid] = (ut[o_piid]+vb[o_piid]+0.5*(1/o_mu0)*(vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid]))*u_B - (1/o_mu0)*b_B*(vb[o_uid]*vb[o_bxid]+vb[o_vid]*vb[o_byid]+vb[o_wid]*vb[o_bzid]);
+
+      FB[o_bxid] = u_B*vb[o_bxid]-vb[o_uid]*b_B;
+
+      FB[o_byid] = u_B*vb[o_byid]-vb[o_vid]*b_B;
+
+      FB[o_bzid] = u_B*vb[o_bzid]-vb[o_wid]*b_B;
+ 
+      // Apply hll filtering
+      if (lambdaA > 0)
+        for(int eq = 0; eq < o_NEQ; eq++)
+          G[ido*o_NEQ+eq] = FA[eq];
+      else if (lambdaB < 0)
+        for(int eq = 0; eq < o_NEQ; eq++)
+          G[ido*o_NEQ+eq] = FB[eq];
+      else if (lambdaB >=0 && lambdaA <=0)
+        for(int eq = 0; eq < o_NEQ; eq++)
+          G[ido*o_NEQ+eq] = (lambdaB*FA[eq] - lambdaA*FB[eq]+lambdaA*lambdaB*(ub[eq]-ut[eq]))/(lambdaB-lambdaA);
+      else
       {
-        F->Q[eq](j,i) = FFLUX[eq];
-        G->Q[eq](j,i) = GFLUX[eq];
+        cerr << "ERROR: HLL Flux Calculation Lambda Unphysical" << endl;
+        exit(-1);
       }
     }
   }
-
-  // fix right wall
-  for(int j = 0; j < nj; j++)
-  {
-    for(int eq = 0; eq < NEQ; eq++)
-    {
-      ul[eq] = U_L->Q[eq](j,ni);
-      ur[eq] = U_R->Q[eq](j,ni);
-
-    }
-
-    computeFluxHLL(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
-    //computeFluxVL(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
-    //computeFluxRoe(FFLUX, ul, ur, nix(j,ni), niy(j,ni));
-    //computeFluxHLLD(FFLUX, ul, ur, nix(j,ni), niy(j,ni), 0);
-    for(int eq = 0; eq < NEQ; eq++)
-      F->Q[eq](j,ni) = FFLUX[eq];
-  }
-  // fix left wall
-
-  for(int i = 0; i < ni; i++)
-  {
-    for(int eq = 0; eq < NEQ; eq++)
-    {
-      ub[eq] = U_B->Q[eq](nj,i);
-      ut[eq] = U_T->Q[eq](nj,i);
-
-    }
-    computeFluxHLL(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
-    //computeFluxVL(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
-    //computeFluxRoe(GFLUX, ub, ut, njx(nj,i), njy(nj,i));
-    //computeFluxHLLD(GFLUX, ub, ut, njx(nj,i), njy(nj,i), 1);
-    for(int eq = 0; eq < NEQ; eq++)
-      G->Q[eq](nj,i) = GFLUX[eq];
-  }
-*/
 }
+
+
+@kernel void computeRes(
+        double* Res, 
+        const double* S, 
+        const double* F, 
+        const double* G, 
+        const double* Aj, 
+        const double* Ai, 
+        const double* Volume)
+{
+  int nj = o_njc;
+  int ni = o_nic;
+  for (int j = 0; j < nj; j++; @outer(0))
+  {
+    for (int i = 0; i < ni; i++; @outer(1))
+    {
+      // res = right + top - left - bottom - source
+      int idl = (j*(ni+1)+i);
+      int idr = (j*(ni+1)+i+1);
+      int idb = (j*ni+i);
+      int idc = (j*ni+i);
+      int idt = ((j+1)*ni+i);
+
+      //printf("idl = %d, idr = %d, idb = %d, idt = %d, idc = %d\n", idl, idr, idb, idt, idc);
+      for (int eq = 0; eq < o_NEQ; eq++; @inner(0))
+      {
+        Res[idc*o_NEQ+eq] = F[idl*o_NEQ+eq]*Ai[idl]
+          + G[idb*o_NEQ+eq]*Aj[idb]
+          - F[idr*o_NEQ+eq]*Ai[idr]
+          - G[idt*o_NEQ+eq]*Aj[idt]
+          - S[idc*o_NEQ+eq]*Volume[idc];
+      }
+    }
+  }
+}
+
+@kernel void rungeKutta(
+    // This function performs a runge kutta updating scheme based on the k
+    double* U_RK,        // output - Consvar with RK dt stepping  
+    const double* U,           // input - Consvar before
+    const double* Res,         // input - Residual 
+    const double* Volume,      // input - Volume matrix
+    const int k,                 // input - iteration
+    const double dt)         // input - dt minimum) 
+{
+  int ni = o_nic;
+  int nj = o_njc; 
+  int bot = o_ng;
+  int left = o_ng;
+  double a[4];
+  if (o_rkorder == 1) // 1 stage RK 
+    a[0] = 1.0; a[1]=a[2]=a[3]=0;
+  if (o_rkorder == 2) // 2 stage RK
+  {
+    a[0] = 0.5; a[1] = 1.0; a[2]=a[3]=0;
+  }
+  if (o_rkorder == 4) // 4 stage RK
+  {
+    a[0] = 0.25; a[1] = 1.0/3.0; a[2] = 0.5; a[3] = 1.0;
+  }
+  if (o_rkorder == 3 || o_rkorder > 4) // no sense in doing 3
+  {
+    cerr << "ERROR: RK Order Not Available?!?!" << endl;
+    exit(1);
+  } 
+  // set iteration for big matrix
+  for (int j = 0; j < nj; j++; @outer(0))
+    for (int i = 0; i < ni; i++; @outer(1))
+    {
+      int i_c = left + i;
+      int j_c = bot + j;
+      int idg = (j_c*o_nic_g+i_c);
+      int idc = (j*ni+i);
+      //printf("idg = %d, idc = %d, k = %d, dt = %lf\n", idg, idc, k, dt);
+      for(int eq = 0; eq < o_NEQ; eq++; @inner(0)) 
+      {
+        U_RK[idg*o_NEQ+eq] = U[idg*o_NEQ+eq] - a[k]*dt*Res[idc*o_NEQ+eq]/Volume[idc];
+      }
+        //U_RK->Q[eq](j_c,i_c) = U->Q[eq](j_c,i_c) - a[k]*dt*Res->Q[eq](j,i)/Volume(j,i);
+    }
+}
+
+
+

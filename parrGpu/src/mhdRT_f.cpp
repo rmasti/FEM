@@ -251,6 +251,7 @@ void rungeKutta(
     }
 }
 
+/*
 void computeRes(Map2Eigen* Res, const Map2Eigen* S, const Map2Eigen* F, const Map2Eigen* G, const RowMajorMatrixXd& Aj, const RowMajorMatrixXd& Ai, const RowMajorMatrixXd& Volume, constants C)
 {
   for (int j = 0; j < Res->Q[rhoid].rows(); j++)
@@ -263,6 +264,7 @@ void computeRes(Map2Eigen* Res, const Map2Eigen* S, const Map2Eigen* F, const Ma
           - G->Q[eq](j,i)*Aj(j,i) 
           - S->Q[eq](j,i)*Volume(j  ,i);
 }
+*/
 /*
 void computeSourceTerm(Map2Eigen* S, Map2Eigen* U, const RowMajorMatrixXd& xc, const RowMajorMatrixXd& yc, constants C)
 {

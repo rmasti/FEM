@@ -22,7 +22,7 @@ LD = mpic++
 CFLAGS = $(addprefix -I, $(HDRDIR)) -std=c++0x -g -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(paths)
 #-fno-exceptions
 # link flags to be used 
-LDFLAGS	= $(addprefix -I, $(HDRDIR)) -L. $(addprefix -L, $(LIBDIR)) -DOCCA_VERSION_1_0
+LDFLAGS	= $(addprefix -I, $(HDRDIR)) -L. $(addprefix -L, $(LIBDIR)) -DOCCA_VERSION_1_0 
 
 # libraries to be linked in
 LIBS = -L ${OCCA_DIR}/lib $(links) -lm  -locca
@@ -78,7 +78,7 @@ OCCAMAP2EIGEN = \
 
 main:$(OBJS) 
 	$(LD)  $(LDFLAGS) -o main $(OBJS) $(LIBS)
-	rm -r $(OBJS)
+	#rm -r $(OBJS)
 
 tests:$(TESTS)
 	$(LD)  $(LDFLAGS) -o main $(TESTS) $(LIBS)
