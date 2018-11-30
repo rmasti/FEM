@@ -1,33 +1,3 @@
-@kernel void computeSourceTerm(
-        double* S, 
-        const double* U, 
-        const double* xc, 
-        const double* yc)
-{
-  int ig, jg;
-  double thet; 
-  double g=o_ACCEL;// 0.1;
-  double su, sv; 
-  double rho;
-  for(int j = 0; j < o_njc; j++; @outer(0))
-  {
-    jg = j + o_ng;
-    for(int i = 0; i < o_nic; i++; @inner(0))
-    {
-      ig = i + o_ng;
-      thet = atan2(yc[j*o_nic+i], xc[j*o_nic+i]);
-      rho = U[(jg*o_nic_g+ig)*o_NEQ+o_rhoid];
-      su = -1*(rho)*(o_ACCEL)*cos(thet);
-      sv = -1*(rho)*(o_ACCEL)*sin(thet);
-      S[(j*o_nic+i)*o_NEQ+o_piid]= ((su*(-1)*g*cos(thet)) + (sv*(-1)*g*sin(thet)));
-      S[(j*o_nic+i)*o_NEQ+o_uid] = su;
-      S[(j*o_nic+i)*o_NEQ+o_vid] = sv;
-      //cout << rho << " " << o_ACCEL  << endl;
-    }
-  }
-}
-
-
 @kernel void MUSCL(double* U_L, 
         double* U_R, 
         double* U_B, 

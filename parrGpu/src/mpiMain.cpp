@@ -176,19 +176,21 @@ int main(int argc, char *argv[]){
   props["defines/o_bxid"]=bxid;
   props["defines/o_byid"]=byid;
   props["defines/o_bzid"]=bzid;
-  props["defines/o_njc"]=njc;
-  props["defines/o_nic"]=nic;
   props["defines/o_njc_g"]=njc_g;
   props["defines/o_nic_g"]=nic_g;
   props["defines/o_limiter"]=C.f_limiter;
   props["defines/o_gamma"]=GAMMA;
   props["defines/o_mu0"]=MU0;
   props["defines/o_rkorder"]=RKORDER;
+  props["defines/o_njc"]=njc;
+  props["defines/o_nic"]=nic;
 
   //props["includes/"]+="include/muscl.hpp";
 
   //occa::kernel occaMap2eigen = device.buildKernel("test/occaMap2Eigen.okl", "occaMap2Eigen");//, props);
-  occa::kernel computeSourceTerm = device.buildKernel("src/mhdRT_f.okl", "computeSourceTerm", props);
+  
+  occa::kernel computeSourceTerm = device.buildKernel("src/computeSourceTerm.okl", "computeSourceTerm", props);
+
 #if 0
   occa::kernel MUSCL = device.buildKernel("src/mhdRT_f.okl", "MUSCL", props);
   occa::kernel compute2dFlux = device.buildKernel("src/mhdRT_f.okl", "compute2dFlux", props);
