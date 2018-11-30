@@ -1,5 +1,6 @@
 #include "mhdRT.hpp"
 #include "occa.hpp"
+#include <cuda_runtime_api.h>
 
 int main(int argc, char *argv[]){
   MPI_Init(&argc, &argv);
