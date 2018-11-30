@@ -1,0 +1,60 @@
+@kernel void rungeKutta(
+    // This function performs a runge kutta updating scheme based on the k
+    double* U_RK,        // output - Consvar with RK dt stepping  
+    const double* U,           // input - Consvar before
+    const double* Res,         // input - Residual 
+    const double* Volume,      // input - Volume matrix
+    const int k,                 // input - iteration
+    const double dt)         // input - dt minimum) 
+{
+
+  //double *a = (double*) malloc(4*sizeof(double));
+  //shared double a[4];
+  //double *a(new double[4]);// = calloc(4, sizeof(double));// double[4];
+
+  //double a[4]={0.0,0.0,0.0,0.0};
+
+  //const double a[4]={0.25,1.0/3.0,0.5,1.0};//a[0] = 1.0; a[1]=a[2]=a[3]=0;
+  /*
+  if (o_rkorder == 1) // 1 stage RK 
+  {
+    const double a[4]={1.0,0.0,0.0,0.0};//a[0] = 1.0; a[1]=a[2]=a[3]=0;
+  }
+  if (o_rkorder == 2) // 2 stage RK
+  {
+    const double a[4]={0.5,1.0,0.0,0.0};//a[0] = 1.0; a[1]=a[2]=a[3]=0;
+    //a[0] = 0.5; a[1] = 1.0; a[2]=a[3]=0;
+  }
+  if (o_rkorder == 4) // 4 stage RK
+  {
+    const double a[4]={0.25,1.0/3.0,0.5,1.0};//a[0] = 1.0; a[1]=a[2]=a[3]=0;
+    //a[0] = 0.25; a[1] = 1.0/3.0; a[2] = 0.5; a[3] = 1.0;
+  }
+  if (o_rkorder == 3 || o_rkorder > 4) // no sense in doing 3
+  {
+    cerr << "ERROR: RK Order Not Available?!?!" << endl;
+    exit(1);
+  } 
+  */
+  // set iteration for   int ni = o_nic;
+  for (int j = 0; j < o_njc; j++; @tile(16, @outer))
+  {
+    const double a[4]={0.25,1.0/3.0,0.5,1.0};
+    for (int i = 0; i < o_nic; i++; @tile(16, @outer, @inner))
+    {
+
+      int bot = o_ng;
+      int left = o_ng;
+                     int i_c = left + i;
+      int j_c = bot + j;
+      int idg = (j_c*o_nic_g+i_c);
+      int idc = (j*o_nic+i);
+      //printf("idg = %d, idc = %d, k = %d, dt = %lf\n", idg, idc, k, dt);
+      for(int eq = 0; eq < o_NEQ; eq++; @tile(8, @inner)) 
+      {
+        U_RK[idg*o_NEQ+eq] = U[idg*o_NEQ+eq] - a[k]*dt*Res[idc*o_NEQ+eq]/Volume[idc];
+      }
+        //U_RK->Q[eq](j_c,i_c) = U->Q[eq](j_c,i_c) - a[k]*dt*Res->Q[eq](j,i)/Volume(j,i);
+    }
+  }
+}

@@ -1,25 +1,17 @@
-
-@kernel void compute2dFlux(double* F, 
-        double* G,  
+@kernel void compute2dFluxF(double* F, 
         const double* U_L,  
         const double* U_R,  
-        const double* U_B,  
-        const double* U_T, 
-        const double* njx, 
-        const double* njy, 
         const double* nix, 
         const double* niy)
 {
-  int nj = o_njc;
-  int ni = o_nic;
 
-  for(int j = 0; j < nj; j++; @outer(0))
+  for(int j = 0; j < o_njc; j++; @tile(16, @outer))
   {
-    for(int i = 0; i <= ni; i++; @outer(1))
+    for(int i = 0; i <= o_nic; i++; @tile(16, @outer, @inner))//@outer(1))
     {
       double ul[o_NEQ], ur[o_NEQ];
-      int ido = j*(ni+1)+i;
-      for(int eq = 0; eq < o_NEQ; eq++; @inner(0))
+      const int ido = j*(o_nic+1)+i;
+      for(int eq = 0; eq < o_NEQ; eq++; @tile(8, @inner))
       {
         int id = (ido)*o_NEQ+eq;
         ul[eq] = U_L[id];
@@ -122,27 +114,26 @@
       else if (lambdaB < 0)
         for(int eq = 0; eq < o_NEQ; eq++)
           F[ido*o_NEQ+eq] = FB[eq];
-      else if (lambdaB >=0 && lambdaA <=0)
+      else 
         for(int eq = 0; eq < o_NEQ; eq++)
           F[ido*o_NEQ+eq] = (lambdaB*FA[eq] - lambdaA*FB[eq]+lambdaA*lambdaB*(ul[eq]-ur[eq]))/(lambdaB-lambdaA);
-      else
-      {
-        cerr << "ERROR: HLL Flux Calculation Lambda Unphysical" << endl;
-        exit(-1);
-      }
-
-      //cout << CA << endl;
-      //printf("j = %d, i = %d, j*(ni+1)+i=%d\n", j,i,j*(ni+1)+i);
     }
   }
-  // loop for G flux
-  for(int j = 0; j <= nj; j++; @outer(0))
+}
+
+@kernel void compute2dFluxG(double* G,  
+        const double* U_B,  
+        const double* U_T, 
+        const double* njx, 
+        const double* njy)
+{
+  for(int j = 0; j <= o_njc; j++; @tile(16, @outer))
   {
-    for(int i = 0; i < ni; i++; @outer(1))
+    for(int i = 0; i < o_nic; i++; @tile(16, @outer, @inner))//@outer(1))
     {
       double ub[o_NEQ], ut[o_NEQ];
-      int ido = j*(ni)+i;
-      for(int eq = 0; eq < o_NEQ; eq++; @inner(0))
+      int ido = j*(o_nic)+i;
+      for(int eq = 0; eq < o_NEQ; eq++; @tile(8, @inner))//@inner(0))
       {
         int id = (ido)*o_NEQ+eq;
         ub[eq] = U_B[id];
@@ -209,9 +200,9 @@
       double FA[o_NEQ], FB[o_NEQ];
       FA[o_rhoid] = vb[o_rhoid]*u_A; 
 
-      FA[o_uid] = vb[o_rhoid]*vb[o_uid]*u_A - vb[o_bxid]*b_A/o_mu0 + vb[o_piid]*nix[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*nix[ido]/(2*o_mu0);
+      FA[o_uid] = vb[o_rhoid]*vb[o_uid]*u_A - vb[o_bxid]*b_A/o_mu0 + vb[o_piid]*njx[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*njx[ido]/(2*o_mu0);
 
-      FA[o_vid] = vb[o_rhoid]*u_A*vb[o_vid]- b_A*vb[o_byid]/o_mu0 + vb[o_piid]*niy[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*niy[ido]/(2*o_mu0);
+      FA[o_vid] = vb[o_rhoid]*u_A*vb[o_vid]- b_A*vb[o_byid]/o_mu0 + vb[o_piid]*njy[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*njy[ido]/(2*o_mu0);
 
       FA[o_wid] = vb[o_rhoid]*u_A*vb[o_wid] - b_A*vb[o_bzid]/o_mu0;
 
@@ -226,9 +217,9 @@
       // Compute flux for state B (right)
       FB[o_rhoid] = vb[o_rhoid]*u_B; 
 
-      FB[o_uid] = vb[o_rhoid]*vb[o_uid]*u_B - vb[o_bxid]*b_B/o_mu0 + vb[o_piid]*nix[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*nix[ido]/(2*o_mu0);
+      FB[o_uid] = vb[o_rhoid]*vb[o_uid]*u_B - vb[o_bxid]*b_B/o_mu0 + vb[o_piid]*njx[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*njx[ido]/(2*o_mu0);
 
-      FB[o_vid] = vb[o_rhoid]*u_B*vb[o_vid]- b_B*vb[o_byid]/o_mu0 + vb[o_piid]*niy[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*niy[ido]/(2*o_mu0);
+      FB[o_vid] = vb[o_rhoid]*u_B*vb[o_vid]- b_B*vb[o_byid]/o_mu0 + vb[o_piid]*njy[ido] + (vb[o_bxid]*vb[o_bxid]+vb[o_byid]*vb[o_byid]+vb[o_bzid]*vb[o_bzid])*njy[ido]/(2*o_mu0);
 
       FB[o_wid] = vb[o_rhoid]*u_B*vb[o_wid] - b_B*vb[o_bzid]/o_mu0;
 
@@ -247,99 +238,10 @@
       else if (lambdaB < 0)
         for(int eq = 0; eq < o_NEQ; eq++)
           G[ido*o_NEQ+eq] = FB[eq];
-      else if (lambdaB >=0 && lambdaA <=0)
+      else 
         for(int eq = 0; eq < o_NEQ; eq++)
           G[ido*o_NEQ+eq] = (lambdaB*FA[eq] - lambdaA*FB[eq]+lambdaA*lambdaB*(ub[eq]-ut[eq]))/(lambdaB-lambdaA);
-      else
-      {
-        cerr << "ERROR: HLL Flux Calculation Lambda Unphysical" << endl;
-        exit(-1);
-      }
     }
   }
+
 }
-
-
-@kernel void computeRes(
-        double* Res, 
-        const double* S, 
-        const double* F, 
-        const double* G, 
-        const double* Aj, 
-        const double* Ai, 
-        const double* Volume)
-{
-  int nj = o_njc;
-  int ni = o_nic;
-  for (int j = 0; j < nj; j++; @outer(0))
-  {
-    for (int i = 0; i < ni; i++; @outer(1))
-    {
-      // res = right + top - left - bottom - source
-      int idl = (j*(ni+1)+i);
-      int idr = (j*(ni+1)+i+1);
-      int idb = (j*ni+i);
-      int idc = (j*ni+i);
-      int idt = ((j+1)*ni+i);
-
-      //printf("idl = %d, idr = %d, idb = %d, idt = %d, idc = %d\n", idl, idr, idb, idt, idc);
-      for (int eq = 0; eq < o_NEQ; eq++; @inner(0))
-      {
-        Res[idc*o_NEQ+eq] = F[idl*o_NEQ+eq]*Ai[idl]
-          + G[idb*o_NEQ+eq]*Aj[idb]
-          - F[idr*o_NEQ+eq]*Ai[idr]
-          - G[idt*o_NEQ+eq]*Aj[idt]
-          - S[idc*o_NEQ+eq]*Volume[idc];
-      }
-    }
-  }
-}
-
-@kernel void rungeKutta(
-    // This function performs a runge kutta updating scheme based on the k
-    double* U_RK,        // output - Consvar with RK dt stepping  
-    const double* U,           // input - Consvar before
-    const double* Res,         // input - Residual 
-    const double* Volume,      // input - Volume matrix
-    const int k,                 // input - iteration
-    const double dt)         // input - dt minimum) 
-{
-  int ni = o_nic;
-  int nj = o_njc; 
-  int bot = o_ng;
-  int left = o_ng;
-  double a[4];
-  if (o_rkorder == 1) // 1 stage RK 
-    a[0] = 1.0; a[1]=a[2]=a[3]=0;
-  if (o_rkorder == 2) // 2 stage RK
-  {
-    a[0] = 0.5; a[1] = 1.0; a[2]=a[3]=0;
-  }
-  if (o_rkorder == 4) // 4 stage RK
-  {
-    a[0] = 0.25; a[1] = 1.0/3.0; a[2] = 0.5; a[3] = 1.0;
-  }
-  if (o_rkorder == 3 || o_rkorder > 4) // no sense in doing 3
-  {
-    cerr << "ERROR: RK Order Not Available?!?!" << endl;
-    exit(1);
-  } 
-  // set iteration for big matrix
-  for (int j = 0; j < nj; j++; @outer(0))
-    for (int i = 0; i < ni; i++; @outer(1))
-    {
-      int i_c = left + i;
-      int j_c = bot + j;
-      int idg = (j_c*o_nic_g+i_c);
-      int idc = (j*ni+i);
-      //printf("idg = %d, idc = %d, k = %d, dt = %lf\n", idg, idc, k, dt);
-      for(int eq = 0; eq < o_NEQ; eq++; @inner(0)) 
-      {
-        U_RK[idg*o_NEQ+eq] = U[idg*o_NEQ+eq] - a[k]*dt*Res[idc*o_NEQ+eq]/Volume[idc];
-      }
-        //U_RK->Q[eq](j_c,i_c) = U->Q[eq](j_c,i_c) - a[k]*dt*Res->Q[eq](j,i)/Volume(j,i);
-    }
-}
-
-
-

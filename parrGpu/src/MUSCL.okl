@@ -1,0 +1,134 @@
+@kernel void MUSCL_LR(double* U_L, 
+    double* U_R, 
+    const double* U)
+{
+  // loop over left and right
+  for(int j = 0; j < o_njc; j++; @tile(16, @outer, @inner))
+  {
+    const int jg = j+o_ng;
+    for(int i = 0; i <= o_nic; i++; @tile(16, @inner))//@outer)
+    {
+      const int ig = i+o_ng;
+      const int fill = (j*(o_nic+1)+i);
+
+      for(int eq = 0; eq < o_NEQ; eq++; @tile(16, @inner))//@inner)
+      {
+
+        //printf("id = %d, jg = %d\n", ig, jg);
+        double delta = 1.0e-6;
+        double theta[2];
+        double r[2];
+        const double ul = U[(jg*o_nic_g+(ig-1))*o_NEQ+eq];
+        const double ull = U[(jg*o_nic_g+(ig-2))*o_NEQ+eq];
+        const double ur = U[(jg*o_nic_g+(ig+1))*o_NEQ+eq];
+        const double uc = U[(jg*o_nic_g+ig)*o_NEQ+eq];
+
+        double denom_L = uc - ul;
+        double denom_R = ur - ul;        
+        denom_L = copysign(1.0,denom_L)*fmax(delta, fabs(denom_L));    
+        denom_R = copysign(1.0,denom_R)*fmax(delta, fabs(denom_R));    
+
+        r[0] = (ul - ull)/denom_L;
+        r[1] = (uc - ul)/denom_R;
+        for(int id = 0; id < 2; id++)
+        {
+          switch (o_limiter)
+          {
+            case 1:
+              theta[id] = 1.0;
+            case 2:
+              theta[id] = (r[id]+fabs(r[id]))/(1.0+fabs(r[id]));
+            case 3:
+              theta[id] = (r[id]+r[id]*r[id])/(1.0+r[id]*r[id]);
+            case 4:
+              theta[id] = 1.5*(r[id]*r[id] + r[id]) / (1.0 + r[id] + r[id]*r[id]);
+            case 5:
+              theta[id] = fmax(0.0,fmin(2.0*r[id],fmin(0.5*(1.0+r[id]),2.0)));
+            case 6:
+              theta[id] = fmax(0.0,fmin(1.0,r[id]));
+            case 7:
+              theta[id] = fmax(0.0,fmax(fmin(2.0*r[id],1),fmin(r[id],2.0)));
+          }
+        }
+
+        double theta_L=theta[0];
+        double theta_R=theta[1];
+        //if(eq == 0)
+          //printf("ig = %d, jg = %d, j = %d, i = %d\n", ig, jg, j, i);
+        U_R[fill*o_NEQ+eq] = uc - 0.5*theta_R*(ur - uc);
+        U_L[fill*o_NEQ+eq] = ul + 0.5*theta_L*(uc - ul);
+      }
+    }
+  }
+}
+
+
+
+@kernel void MUSCL_BT(double* U_B, 
+    double* U_T,
+    const double* U)
+{
+  // loop over bot and top
+  for(int j = 0; j <= o_njc; j++; @tile(16, @outer))
+  {
+    const int jg = j+o_ng;
+    for(int i = 0; i < o_nic; i++; @tile(16, @inner))//@outer)
+    {
+      const int ig = i+o_ng;
+      const int fill = (j*o_nic+i);
+
+      for(int eq = 0; eq < o_NEQ; eq++; @tile(16, @inner))//@inner)
+      {
+        double delta = 1.0e-6;
+        double theta[2];
+        double r[2];
+
+        double uc = U[(jg*o_nic_g+ig)*o_NEQ+eq];
+        double ub = U[((jg-1)*o_nic_g+ig)*o_NEQ+eq];
+        double ubb = U[((jg-2)*o_nic_g+ig)*o_NEQ+eq];
+        double ut = U[((jg+1)*o_nic_g+ig)*o_NEQ+eq];
+        double denom_B = uc - ub;
+        double denom_T = ut - ub;
+        denom_B = copysign(1.0,denom_B)*fmax(delta, fabs(denom_B));    
+        denom_T = copysign(1.0,denom_T)*fmax(delta, fabs(denom_T));    
+
+        r[0] = (ub - ubb)/denom_B;
+        r[1] = (uc - ub)/denom_T;
+        switch (o_limiter)
+        {
+          case 1:
+            for(int id = 0; id < 2; id++)
+              theta[id] = 1.0;
+          case 2:
+            for(int id = 0; id < 2; id++)
+              theta[id] = (r[id]+fabs(r[id]))/(1.0+fabs(r[id]));
+          case 3:
+            for(int id = 0; id < 2; id++)
+              theta[id] = (r[id]+r[id]*r[id])/(1.0+r[id]*r[id]);
+          case 4:
+            for(int id = 0; id < 2; id++)
+              theta[id] = 1.5*(r[id]*r[id] + r[id]) / (1.0 + r[id] + r[id]*r[id]);
+          case 5:
+            for(int id = 0; id < 2; id++)
+              theta[id] = fmax(0.0,fmin(2.0*r[id],fmin(0.5*(1.0+r[id]),2.0)));
+          case 6:
+            for(int id = 0; id < 2; id++)
+              theta[id] = fmax(0.0,fmin(1.0,r[id]));
+          case 7:
+            for(int id = 0; id < 2; id++)
+              theta[id] = fmax(0.0,fmax(fmin(2.0*r[id],1),fmin(r[id],2.0)));
+        }
+
+        double theta_B=theta[0];
+        double theta_T=theta[1];
+
+        //int fill = (j*o_nic+i)*o_NEQ+eq;
+
+        U_B[fill*o_NEQ+eq] = ub + 0.5*theta_B*(uc - ub);
+        U_T[fill*o_NEQ+eq] = uc - 0.5*theta_T*(ut - uc);
+
+      }
+    }
+  }
+}
+
