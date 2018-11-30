@@ -12,7 +12,7 @@
     for(int i = 0; i < o_nic; i++; @inner(0))
     {
       //ig = i + o_ng;
-      //thet = atan2(yc[j*o_nic+i], xc[j*o_nic+i]);
+      thet = atan2(yc[j*o_nic+i], xc[j*o_nic+i]);
       double opp = yc[j*o_nic+i];
       double adj = xc[j*o_nic+i];
       double hyp = sqrt(opp*opp+adj*adj);
