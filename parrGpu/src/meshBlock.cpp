@@ -46,6 +46,7 @@ MPI_Comm meshBlock(
 
   MPI_Comm com2d; // Setup cartesian communicator
   MPI_Cart_create(MPI_COMM_WORLD, 2, dim, period, reorder, &com2d);
+
   MPI_Comm_rank(com2d, &rank);
 
   int nb[2];

@@ -1,9 +1,9 @@
 #include "mhdRT.hpp"
 #include "occa.hpp"
-#include <cuda_runtime_api.h>
+//#include <cuda_runtime_api.h>
 
 int main(int argc, char *argv[]){
-  MPI_Init(&argc, &argv);
+  MPI_Init(&argc, &argv); 
 
   constants C;
   C.f_limiter = 5;
@@ -17,17 +17,17 @@ int main(int argc, char *argv[]){
   double dt;
   //occa::umalloc(sizeof(double), &dt);
   MatrixXd time(1, C.nmax);
+  time(0,0)=0.0;
 
   int rank, size;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  string mesh = "../mesh/360x300.msh"; //debugMatlab.msh";
-  //string mesh = "../mesh/16x10.msh"; //debugMatlab.msh";
+  //string mesh = "../mesh/360x300.msh"; //debugMatlab.msh";
+  string mesh = "../mesh/16x10.msh"; //debugMatlab.msh";
   string outputFolder = "./output/";
   //string outputFolder = "/mnt/c/Users/rlm78/Downloads/FEM/";
-
 
   RowMajorMatrixXd xcL_g, ycL_g;
   RowMajorMatrixXd nixL, niyL;
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]){
     cout << " Initializing " << endl;
  
   initialize(V, xcL_g, ycL_g, C);
-  primToCons(U,V);
+  primToCons(U, V);
 
   U_RK = U;
   outputArrayMap(outputFolder, "UL", U, rank);
@@ -144,16 +144,16 @@ int main(int argc, char *argv[]){
   occa::memory o_U = device.malloc(njc_g*nic_g*NEQ*sizeof(double), U->Q_raw);
   occa::memory o_U_RK = device.malloc(njc_g*nic_g*NEQ*sizeof(double), U_RK->Q_raw);
 
-  occa::memory o_nixL = device.malloc(nic*(njc+1)*sizeof(double), nixL.data());
-  occa::memory o_niyL = device.malloc(nic*(njc+1)*sizeof(double), niyL.data());
-  occa::memory o_AiL =  device.malloc(nic*(njc+1)*sizeof(double), AiL.data());
+  occa::memory o_njxL = device.malloc((nic)*(njc+1)*sizeof(double), njxL.data());
+  occa::memory o_njyL = device.malloc((nic)*(njc+1)*sizeof(double), njyL.data());
+  occa::memory o_AjL =  device.malloc((nic)*(njc+1)*sizeof(double), AjL.data());
   occa::memory o_U_B =  device.malloc(nic*(njc+1)*NEQ*sizeof(double), U_B->Q_raw);
   occa::memory o_U_T =  device.malloc(nic*(njc+1)*NEQ*sizeof(double), U_T->Q_raw);
   occa::memory o_G =    device.malloc(nic*(njc+1)*NEQ*sizeof(double), G->Q_raw);
 
-  occa::memory o_njxL = device.malloc((nic+1)*(njc)*sizeof(double), njxL.data());
-  occa::memory o_njyL = device.malloc((nic+1)*(njc)*sizeof(double), njyL.data());
-  occa::memory o_AjL =  device.malloc((nic+1)*(njc)*sizeof(double), AjL.data());
+  occa::memory o_nixL = device.malloc(njc*(nic+1)*sizeof(double), nixL.data());
+  occa::memory o_niyL = device.malloc(njc*(nic+1)*sizeof(double), niyL.data());
+  occa::memory o_AiL =  device.malloc(njc*(nic+1)*sizeof(double), AiL.data()); 
   occa::memory o_U_L =  device.malloc((nic+1)*(njc)*NEQ*sizeof(double), U_L->Q_raw);
   occa::memory o_U_R =  device.malloc((nic+1)*(njc)*NEQ*sizeof(double), U_R->Q_raw);
   occa::memory o_F =    device.malloc((nic+1)*(njc)*NEQ*sizeof(double), F->Q_raw);
@@ -214,7 +214,7 @@ int main(int argc, char *argv[]){
     cout << " Entering Time Loop " << endl;
 
   U_RK = U;
-  while(time(0, n) < tend && n < 10)
+  while(time(0, n) < tend && n < 2000)
   {
     for (int k = 0; k < RKORDER; k++)
     {
@@ -232,9 +232,7 @@ int main(int argc, char *argv[]){
       //o_S.copyTo(S->Q_raw);
       //device.finish();
       //device.finish();
-      //cout << S->Q[uid] << endl;
-
-      t = clock()-t;
+      //cout << S->Q[uid] << endl; t = clock()-t;
       avgT[1] =  ((float)t)/CLOCKS_PER_SEC;
 
       t = clock();
@@ -292,12 +290,10 @@ int main(int argc, char *argv[]){
       o_U_RK.copyTo(U_RK->Q_raw);
       device.finish();
 
-      /*
       //cout << U_RK->Q[rhoid] << endl;
 
       t = clock()-t;
       avgT[5] =  ((float)t)/CLOCKS_PER_SEC;
-      */
     }
   
     U=U_RK;
@@ -333,7 +329,27 @@ int main(int argc, char *argv[]){
     }
   }
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
+  //occaFree(MUSCL_LR);
+  //occaFree(MUSCL_BT);
+  //occaFree(o_U);
+  //occaFree(props);
   //outputArrayMap(outputFolder, "UL", U, rank);
+
+  delete V; V = NULL;
+  delete U; U = NULL;
+  delete U_RK; U_RK= NULL;
+  delete Res; Res= NULL;
+  delete S; S= NULL;
+  delete F; F= NULL;
+  delete G; G= NULL;
+  delete U_B; U_B= NULL;
+  delete U_T; U_T= NULL;
+  delete U_L; U_L= NULL;
+  delete U_R; U_R= NULL;
+
+  occa::free(device);
+
   MPI_Finalize();
   return 0;
+
 }

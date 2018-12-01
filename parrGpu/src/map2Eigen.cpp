@@ -2,8 +2,6 @@
 
 
 // constructor
-
-
 Map2Eigen :: Map2Eigen(int nj, int ni, int nequ):
   Q_raw(new double[nj*ni*nequ]),
   Q{{Q_raw,   nj, ni, Stride<Dynamic,Dynamic>(ni*nequ,nequ) },
@@ -17,6 +15,17 @@ Map2Eigen :: Map2Eigen(int nj, int ni, int nequ):
 {
 
 }
+
+Map2Eigen::~Map2Eigen()
+{
+  delete [] Q_raw; Q_raw=NULL;
+
+  //delete Q; Q=NULL;
+  for(int eq = 0; eq < NEQ; eq++)
+    Q[eq].resize(0,0);
+
+}
+
 
 void stitchMap2EigenWrite(string Address, string FileName,const Map2Eigen* IN, const int n, const int *coord, MPI_Comm &com2d, constants C)
 {
@@ -72,12 +81,9 @@ void stitchMap2EigenWrite(string Address, string FileName,const Map2Eigen* IN, c
             out->Q[eq].block(njc*j,nic*i, njc, nic) = temp->Q[eq];
         }      
     outputArrayMap(Address, FileName, out, n);
+    delete out; out = NULL;
   }
-  delete temp->Q_raw; temp->Q_raw = NULL;
+  delete temp; temp = NULL;
 
   MPI_Barrier(com2d);
 }
-
-
-
-
