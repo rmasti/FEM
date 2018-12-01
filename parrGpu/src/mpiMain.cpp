@@ -100,8 +100,13 @@ int main(int argc, char *argv[]){
   if(rank == 0)
     cout << " Setting BC " << endl;
 
+
   mpiSetBc(U, nixL, niyL, njxL, njyL, com2d,  C);
 
+  if(rank == 0)
+    cout << " Set BC " << endl;
+
+ 
  
   MPI_Barrier(com2d);
 
@@ -214,7 +219,7 @@ int main(int argc, char *argv[]){
     cout << " Entering Time Loop " << endl;
 
   U_RK = U;
-  while(time(0, n) < tend && n < 2000)
+  while(time(0, n) < tend && n < 10)
   {
     for (int k = 0; k < RKORDER; k++)
     {

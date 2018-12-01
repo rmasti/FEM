@@ -233,7 +233,7 @@ void mpiSetBc(
     for(int j = 0; j < C.num_ghost; j++)
       for(int eq = 0; eq < NEQ; eq++)
         U->Q[eq].row(jco-1-sign*j) = tempBin->Q[eq].row(j); // fill in bottom data shift and flip sign
-    delete tempBin; tempBin = NULL;
+    //delete tempBin; tempBin = NULL;
   }
   /////////////////////////////////////
   // recv top data
@@ -255,6 +255,12 @@ void mpiSetBc(
   }
   ///////////////////////////////////
 
+  for(int eq = 0; eq < NEQ; eq++)
+  {
+    tempTin->Q[eq].resize(0,0);
+
+
+  }
   delete tempTin; tempTin = NULL;
   delete tempTout; tempTout = NULL;
 
@@ -267,4 +273,6 @@ void mpiSetBc(
 
   delete tempBin; tempBin = NULL;
   delete tempBout; tempBout = NULL;
+
+
 }
