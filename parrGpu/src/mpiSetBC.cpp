@@ -255,12 +255,6 @@ void mpiSetBc(
   }
   ///////////////////////////////////
 
-  for(int eq = 0; eq < NEQ; eq++)
-  {
-    tempTin->Q[eq].resize(0,0);
-
-
-  }
   delete tempTin; tempTin = NULL;
   delete tempTout; tempTout = NULL;
 

@@ -219,7 +219,7 @@ int main(int argc, char *argv[]){
     cout << " Entering Time Loop " << endl;
 
   U_RK = U;
-  while(time(0, n) < tend && n < 10)
+  while(time(0, n) < tend && n < 1000)
   {
     for (int k = 0; k < RKORDER; k++)
     {
@@ -300,6 +300,7 @@ int main(int argc, char *argv[]){
       t = clock()-t;
       avgT[5] =  ((float)t)/CLOCKS_PER_SEC;
     }
+    cout << " Made it past rk stages " << endl;
   
     U=U_RK;
     //cout << U->Q[rhoid]<< endl;
@@ -342,7 +343,7 @@ int main(int argc, char *argv[]){
 
   delete V; V = NULL;
   delete U; U = NULL;
-  delete U_RK; U_RK= NULL;
+  //delete U_RK; U_RK= NULL;
   delete Res; Res= NULL;
   delete S; S= NULL;
   delete F; F= NULL;

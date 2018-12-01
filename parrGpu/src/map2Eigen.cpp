@@ -24,8 +24,6 @@ Map2Eigen::~Map2Eigen()
   //for(int eq = 0; eq < NEQ; eq++)
    // Q[eq].resize(0,0);//resize(0,0);// = NULL;//resize(0,0);
   //Map2Eigen Q = Map2Eigen(0, 0, 0);
-
-
 }
 
 

@@ -20,7 +20,7 @@ LD = mpic++
 
 # compiler flags to be used (set to compile with debugging on)
 CFLAGS = $(addprefix -I, $(HDRDIR)) -std=c++0x -g -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(paths)
-#-fno-exceptions
+#-f no-exceptions
 # link flags to be used 
 LDFLAGS	= $(addprefix -I, $(HDRDIR)) -g -L. $(addprefix -L, $(LIBDIR)) -DOCCA_VERSION_1_0 
 
