@@ -1,8 +1,8 @@
 @kernel void compute2dFluxF(double* F, 
-        const double* U_L,  
-        const double* U_R,  
-        const double* nix, 
-        const double* niy)
+        @restrict const double* U_L,  
+        @restrict const double* U_R,  
+        @restrict const double* nix, 
+        @restrict const double* niy)
 {
 
   for(int j = 0; j < o_njc; j++; @tile(16, @outer))
@@ -122,10 +122,10 @@
 }
 
 @kernel void compute2dFluxG(double* G,  
-        const double* U_B,  
-        const double* U_T, 
-        const double* njx, 
-        const double* njy)
+        @restrict const double* U_B,  
+        @restrict const double* U_T, 
+        @restrict const double* njx, 
+        @restrict const double* njy)
 {
   for(int j = 0; j <= o_njc; j++; @tile(16, @outer))
   {

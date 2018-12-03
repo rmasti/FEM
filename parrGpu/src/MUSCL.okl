@@ -1,6 +1,6 @@
 @kernel void MUSCL_LR(double* U_L, 
     double* U_R, 
-    const double* U)
+    @restrict const double* U)
 {
   // loop over left and right
   for(int j = 0; j < o_njc; j++; @tile(16, @outer, @inner))
@@ -66,7 +66,7 @@
 
 @kernel void MUSCL_BT(double* U_B, 
     double* U_T,
-    const double* U)
+    @restrict const double* U)
 {
   // loop over bot and top
   for(int j = 0; j <= o_njc; j++; @tile(16, @outer))

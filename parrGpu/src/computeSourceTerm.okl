@@ -1,5 +1,9 @@
 //#include <math.h>
-@kernel void computeSourceTerm(double* S, const double* U, const double* xc, const double* yc){
+@kernel void computeSourceTerm(
+        double* S, 
+        @restrict const double* U, 
+        @restrict const double* xc, 
+        @restrict const double* yc){
   //double thet; 
   //double g=o_ACCEL;// 0.1;
 

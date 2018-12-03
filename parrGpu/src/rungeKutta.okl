@@ -1,11 +1,11 @@
 @kernel void rungeKutta(
     // This function performs a runge kutta updating scheme based on the k
     double* U_RK,        // output - Consvar with RK dt stepping  
-    const double* U,           // input - Consvar before
-    const double* Res,         // input - Residual 
-    const double* Volume,      // input - Volume matrix
-    const int k,                 // input - iteration
-    const double dt)         // input - dt minimum) 
+    @restrict const double* U,           // input - Consvar before
+    @restrict const double* Res,         // input - Residual 
+    @restrict const double* Volume,      // input - Volume matrix
+    @restrict const int k,                 // input - iteration
+    @restrict const double dt)         // input - dt minimum) 
 {
 
   //double *a = (double*) malloc(4*sizeof(double));

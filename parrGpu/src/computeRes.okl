@@ -1,10 +1,10 @@
 @kernel void computeRes(double* Res, 
-        const double* S, 
-        const double* F, 
-        const double* G, 
-        const double* Aj, 
-        const double* Ai, 
-        const double* Volume)
+        @restrict const double* S, 
+        @restrict const double* F, 
+        @restrict const double* G, 
+        @restrict const double* Aj, 
+        @restrict const double* Ai, 
+        @restrict const double* Volume)
 {
   for (int j = 0; j < o_njc; j++; @tile(16, @outer))
   {
