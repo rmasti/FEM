@@ -10,7 +10,7 @@ int main(int argc, char *argv[]){
   C.num_ghost = 3;
   C.cfl = 0.45;
   C.nmax = 10000;
-  C.wint = 100;
+  C.wint = 500;
   C.pint = 10;
   double A = (2-1)/(1.0+2.0);
   double tend = 6.0/sqrt(A*ACCEL*2);
@@ -24,8 +24,9 @@ int main(int argc, char *argv[]){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+  string mesh = "../mesh/560x480.msh"; //debugMatlab.msh";
   //string mesh = "../mesh/360x300.msh"; //debugMatlab.msh";
-  string mesh = "../mesh/16x10.msh"; //debugMatlab.msh";
+  //string mesh = "../mesh/16x10.msh"; //debugMatlab.msh";
   string outputFolder = "./output/";
   //string outputFolder = "/mnt/c/Users/rlm78/Downloads/FEM/";
 
@@ -142,7 +143,7 @@ int main(int argc, char *argv[]){
   
   occa::device device;
   char setupString[BUFSIZ];
-  sprintf(setupString, "mode: 'CUDA', device_id : %d", 0);
+  sprintf(setupString, "mode: 'CUDA', device_id : %d", 0); // odd ranks to 1 even ranks to 0
   device.setup(setupString); 
 
 
@@ -219,14 +220,15 @@ int main(int argc, char *argv[]){
     cout << " Entering Time Loop " << endl;
 
   U_RK = U;
-  while(time(0, n) < tend && n < 1000)
+  while(time(0, n) < tend && n < 1)
   {
     for (int k = 0; k < RKORDER; k++)
     {
       t = clock();
+      //cout << "here" << endl;
       mpiSetBc(U_RK, nixL, niyL, njxL, njyL, com2d,  C);
       t = clock()-t;
-      avgT[0] =  ((float)t)/CLOCKS_PER_SEC;
+      avgT[0] =  ((float)t)/(1.0e-3*CLOCKS_PER_SEC);
       MPI_Barrier(com2d);
       o_U_RK.copyFrom(U_RK->Q_raw);
       device.finish();
@@ -238,11 +240,13 @@ int main(int argc, char *argv[]){
       //device.finish();
       //device.finish();
       //cout << S->Q[uid] << endl; t = clock()-t;
-      avgT[1] =  ((float)t)/CLOCKS_PER_SEC;
+      t = clock()-t;
+      avgT[1] =  ((float)t)/(1.0e-3*CLOCKS_PER_SEC);
 
       t = clock();
-
       MUSCL_LR(o_U_L, o_U_R, o_U_RK);
+      if (rank == 0)
+        cout << "here" << endl;
       MUSCL_BT(o_U_B, o_U_T, o_U_RK);
       //o_U_L.copyTo(U_L->Q_raw);
       //device.finish();
@@ -260,7 +264,7 @@ int main(int argc, char *argv[]){
       //cout << U_T->Q[rhoid] << endl; 
 
       t = clock()-t;
-      avgT[2] =  ((float)t)/CLOCKS_PER_SEC;
+      avgT[2] =  ((float)t)/(1.0e-3*CLOCKS_PER_SEC);
 
       t = clock();
       compute2dFluxF(o_F, o_U_L, o_U_R, o_nixL, o_niyL);
@@ -274,7 +278,7 @@ int main(int argc, char *argv[]){
       //cout << G->Q[rhoid] << endl;
 
       t = clock()-t;
-      avgT[3] =  ((float)t)/CLOCKS_PER_SEC;
+      avgT[3] =  ((float)t)/(1.0e-3*CLOCKS_PER_SEC);
 
       t = clock();
       //computeRes(Res, S, F, G, AjL, AiL, VolumeL, C);
@@ -285,7 +289,7 @@ int main(int argc, char *argv[]){
       
 
       t = clock()-t;
-      avgT[4] =  ((float)t)/CLOCKS_PER_SEC;
+      avgT[4] =  ((float)t)/(1.0e-3*CLOCKS_PER_SEC);
 
       t = clock();
       //rungeKutta(U_RK, U, Res, VolumeL, k, dt, C);
@@ -298,9 +302,9 @@ int main(int argc, char *argv[]){
       //cout << U_RK->Q[rhoid] << endl;
 
       t = clock()-t;
-      avgT[5] =  ((float)t)/CLOCKS_PER_SEC;
+      avgT[5] =  ((float)t)/(1.0e-3*CLOCKS_PER_SEC);
     }
-    cout << " Made it past rk stages " << endl;
+    //cout << " Made it past rk stages " << endl;
   
     U=U_RK;
     //cout << U->Q[rhoid]<< endl;
