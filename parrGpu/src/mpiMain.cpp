@@ -9,9 +9,9 @@ int main(int argc, char *argv[]){
   C.f_limiter = 5;
   C.num_ghost = 3;
   C.cfl = 0.45;
-  C.nmax = 10000;
-  C.wint = 500;
-  C.pint = 10;
+  C.nmax = 1000000;
+  C.wint = 1000;
+  C.pint = 100;
   double A = (2-1)/(1.0+2.0);
   double tend = 6.0/sqrt(A*ACCEL*2);
   double dt;
@@ -106,8 +106,6 @@ int main(int argc, char *argv[]){
 
   if(rank == 0)
     cout << " Set BC " << endl;
-
- 
  
   MPI_Barrier(com2d);
 
@@ -138,14 +136,15 @@ int main(int argc, char *argv[]){
   bytes += njc*nic*(3+NEQ*2); // vol, xcL, ycL, S, Res
   bytes = bytes*8; 
   
-  printf("total gb loaded onto gpu: tot = %lf\n", bytes*1.0e-9);
+  if(rank==0)
+    printf("total gb loaded onto gpu: tot = %lf\n", bytes*1.0e-9);
 
   
   occa::device device;
   char setupString[BUFSIZ];
   sprintf(setupString, "mode: 'CUDA', device_id : %d", 0); // odd ranks to 1 even ranks to 0
+  //sprintf(setupString, "mode: 'Serial', device_id : %d", 0); // odd ranks to 1 even ranks to 0
   device.setup(setupString); 
-
 
   occa::memory o_U = device.malloc(njc_g*nic_g*NEQ*sizeof(double), U->Q_raw);
   occa::memory o_U_RK = device.malloc(njc_g*nic_g*NEQ*sizeof(double), U_RK->Q_raw);
@@ -220,13 +219,13 @@ int main(int argc, char *argv[]){
     cout << " Entering Time Loop " << endl;
 
   U_RK = U;
-  while(time(0, n) < tend && n < 1)
+  while(time(0, n) < tend)// && n < 10)
   {
     for (int k = 0; k < RKORDER; k++)
     {
       t = clock();
       //cout << "here" << endl;
-      mpiSetBc(U_RK, nixL, niyL, njxL, njyL, com2d,  C);
+      mpiSetBc(U, nixL, niyL, njxL, njyL, com2d,  C);
       t = clock()-t;
       avgT[0] =  ((float)t)/(1.0e-3*CLOCKS_PER_SEC);
       MPI_Barrier(com2d);
@@ -236,6 +235,7 @@ int main(int argc, char *argv[]){
       t = clock();
       //computeSourceTerm(S, U_RK, xcL, ycL, C);
       computeSourceTerm(o_S, o_U_RK, o_xcL, o_ycL);
+      device.finish();
       //o_S.copyTo(S->Q_raw);
       //device.finish();
       //device.finish();
@@ -245,9 +245,9 @@ int main(int argc, char *argv[]){
 
       t = clock();
       MUSCL_LR(o_U_L, o_U_R, o_U_RK);
-      if (rank == 0)
-        cout << "here" << endl;
+      device.finish();
       MUSCL_BT(o_U_B, o_U_T, o_U_RK);
+      device.finish();
       //o_U_L.copyTo(U_L->Q_raw);
       //device.finish();
       //o_U_R.copyTo(U_R->Q_raw);
@@ -268,7 +268,9 @@ int main(int argc, char *argv[]){
 
       t = clock();
       compute2dFluxF(o_F, o_U_L, o_U_R, o_nixL, o_niyL);
+      device.finish();
       compute2dFluxG(o_G, o_U_B, o_U_T, o_njxL, o_njyL);
+      device.finish();
 
       //o_F.copyTo(F->Q_raw);
       //device.finish();
@@ -283,6 +285,7 @@ int main(int argc, char *argv[]){
       t = clock();
       //computeRes(Res, S, F, G, AjL, AiL, VolumeL, C);
       computeRes(o_Res, o_S, o_F, o_G, o_AjL, o_AiL, o_VolumeL);
+      device.finish();
       //o_Res.copyTo(Res->Q_raw);
       //device.finish();
       //cout << Res->Q[rhoid] << endl;
@@ -296,6 +299,7 @@ int main(int argc, char *argv[]){
       //o_dt.copyFrom(*dt);
       //o_k.copyFrom(*k);
       rungeKutta(o_U_RK, o_U, o_Res, o_VolumeL, k, dt);
+      device.finish();
       o_U_RK.copyTo(U_RK->Q_raw);
       device.finish();
 
@@ -333,9 +337,6 @@ int main(int argc, char *argv[]){
       }
 
       stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
-      outputArray(outputFolder, "xcLg", xcL, rank+n);
-      outputArray(outputFolder, "ycLg", ycL, rank+n);
-      outputArrayMap(outputFolder, "UL", U, rank+n);
     }
   }
   stitchMap2EigenWrite(outputFolder, "U", U, n,coordMax, com2d, C);
