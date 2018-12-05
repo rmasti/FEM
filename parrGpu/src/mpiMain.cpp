@@ -225,7 +225,7 @@ int main(int argc, char *argv[]){
     {
       t = clock();
       //cout << "here" << endl;
-      mpiSetBc(U, nixL, niyL, njxL, njyL, com2d,  C);
+      mpiSetBc(U_RK, nixL, niyL, njxL, njyL, com2d,  C);
       t = clock()-t;
       avgT[0] =  ((float)t)/(1.0e-3*CLOCKS_PER_SEC);
       MPI_Barrier(com2d);
