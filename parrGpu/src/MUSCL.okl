@@ -3,16 +3,16 @@
     @restrict const double* U)
 {
   // loop over left and right
-  for(int j = 0; j < o_njc; j++; @tile(16, @outer, @inner))
+  for(int j = 0; j < o_njc; j++; @tile(8, @outer, @inner))
   {
-    const int jg = j+o_ng;
-    for(int i = 0; i <= o_nic; i++; @tile(16, @inner))//@outer)
+    for(int i = 0; i <= o_nic; i++; @tile(32, @inner))//@outer)
     {
-      const int ig = i+o_ng;
-      const int fill = (j*(o_nic+1)+i);
-
-      for(int eq = 0; eq < o_NEQ; eq++; @tile(16, @inner))//@inner)
+      for(int eq = 0; eq < o_NEQ; eq++)//@inner)
       {
+        const int jg = j+o_ng;
+        const int ig = i+o_ng;
+        const int fill = (j*(o_nic+1)+i);
+
 
         //printf("id = %d, jg = %d\n", ig, jg);
         double delta = 1.0e-6;
@@ -54,7 +54,7 @@
         double theta_L=theta[0];
         double theta_R=theta[1];
         //if(eq == 0)
-          //printf("ig = %d, jg = %d, j = %d, i = %d\n", ig, jg, j, i);
+        //printf("ig = %d, jg = %d, j = %d, i = %d\n", ig, jg, j, i);
         U_R[fill*o_NEQ+eq] = uc - 0.5*theta_R*(ur - uc);
         U_L[fill*o_NEQ+eq] = ul + 0.5*theta_L*(uc - ul);
       }
@@ -69,16 +69,17 @@
     @restrict const double* U)
 {
   // loop over bot and top
-  for(int j = 0; j <= o_njc; j++; @tile(16, @outer))
+  for(int j = 0; j <= o_njc; j++; @tile(8, @outer, @inner))
   {
-    const int jg = j+o_ng;
-    for(int i = 0; i < o_nic; i++; @tile(16, @inner))//@outer)
+    for(int i = 0; i < o_nic; i++; @tile(32, @inner))//@outer)
     {
-      const int ig = i+o_ng;
-      const int fill = (j*o_nic+i);
-
-      for(int eq = 0; eq < o_NEQ; eq++; @tile(16, @inner))//@inner)
+      for(int eq = 0; eq < o_NEQ; eq++)//@inner)
       {
+        const int jg = j+o_ng;
+        const int ig = i+o_ng;
+        const int fill = (j*o_nic+i);
+
+
         double delta = 1.0e-6;
         double theta[2];
         double r[2];

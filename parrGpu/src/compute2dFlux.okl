@@ -5,13 +5,13 @@
         @restrict const double* niy)
 {
 
-  for(int j = 0; j < o_njc; j++; @tile(16, @outer))
+  for(int j = 0; j < o_njc; j++; @tile(8, @outer, @inner))
   {
-    for(int i = 0; i <= o_nic; i++; @tile(16, @outer, @inner))//@outer(1))
+    for(int i = 0; i <= o_nic; i++; @tile(32, @inner))//@outer(1))
     {
       double ul[o_NEQ], ur[o_NEQ];
       const int ido = j*(o_nic+1)+i;
-      for(int eq = 0; eq < o_NEQ; eq++; @tile(8, @inner))
+      for(int eq = 0; eq < o_NEQ; eq++)
       {
         int id = (ido)*o_NEQ+eq;
         ul[eq] = U_L[id];
@@ -127,13 +127,13 @@
         @restrict const double* njx, 
         @restrict const double* njy)
 {
-  for(int j = 0; j <= o_njc; j++; @tile(16, @outer))
+  for(int j = 0; j <= o_njc; j++; @tile(8, @outer, @inner))
   {
-    for(int i = 0; i < o_nic; i++; @tile(16, @outer, @inner))//@outer(1))
+    for(int i = 0; i < o_nic; i++; @tile(32, @inner))//@outer(1))
     {
       double ub[o_NEQ], ut[o_NEQ];
       int ido = j*(o_nic)+i;
-      for(int eq = 0; eq < o_NEQ; eq++; @tile(8, @inner))//@inner(0))
+      for(int eq = 0; eq < o_NEQ; eq++)//@inner(0))
       {
         int id = (ido)*o_NEQ+eq;
         ub[eq] = U_B[id];

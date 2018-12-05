@@ -6,9 +6,9 @@
         const double* Ai, 
         const double* Volume)
 {
-  for (int j = 0; j < o_njc; j++;  @outer)
+  for (int j = 0; j < o_njc; j++;  @tile(8, @outer, @inner))
   {
-    for (int i = 0; i < o_nic; i++; @inner)
+    for (int i = 0; i < o_nic; i++; @tile(32, @inner))
     {
       // res = right + top - left - bottom - source
       const int nj = o_njc;
