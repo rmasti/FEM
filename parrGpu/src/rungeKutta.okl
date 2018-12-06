@@ -1,11 +1,11 @@
 @kernel void rungeKutta(
     // This function performs a runge kutta updating scheme based on the k
     double* U_RK,        // output - Consvar with RK dt stepping  
-    const double* U,           // input - Consvar before
-    const double* Res,         // input - Residual 
-    const double* Volume,      // input - Volume matrix
-    const int k,                 // input - iteration
-    const double dt)         // input - dt minimum) 
+    @restrict const double* U,           // input - Consvar before
+    @restrict const double* Res,         // input - Residual 
+    @restrict const double* Volume,      // input - Volume matrix
+    @restrict const int k,                 // input - iteration
+    @restrict const double dt)         // input - dt minimum) 
 {
 
   //double *a = (double*) malloc(4*sizeof(double));
@@ -37,11 +37,12 @@
   } 
   */
   // set iteration for   int ni = o_nic;
-  for (int j = 0; j < o_njc; j++; @tile(8, @outer, @inner))
+  for (int j = 0; j < o_njc; j++; @tile(16, @outer))
   {
-    for (int i = 0; i < o_nic; i++; @tile(32, @inner))
+    const double a[4]={0.25,1.0/3.0,0.5,1.0};
+    for (int i = 0; i < o_nic; i++; @tile(16, @outer, @inner))
     {
-      const double a[4]={0.25,1.0/3.0,0.5,1.0};
+
       int bot = o_ng;
       int left = o_ng;
                      int i_c = left + i;
@@ -49,7 +50,7 @@
       int idg = (j_c*o_nic_g+i_c);
       int idc = (j*o_nic+i);
       //printf("idg = %d, idc = %d, k = %d, dt = %lf\n", idg, idc, k, dt);
-      for(int eq = 0; eq < o_NEQ; eq++) 
+      for(int eq = 0; eq < o_NEQ; eq++; @tile(8, @inner)) 
       {
         U_RK[idg*o_NEQ+eq] = U[idg*o_NEQ+eq] - a[k]*dt*Res[idc*o_NEQ+eq]/Volume[idc];
       }

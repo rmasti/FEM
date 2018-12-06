@@ -1,26 +1,26 @@
 @kernel void computeRes(double* Res, 
-        const double* S, 
-        const double* F, 
-        const double* G, 
-        const double* Aj, 
-        const double* Ai, 
-        const double* Volume)
+        @restrict const double* S, 
+        @restrict const double* F, 
+        @restrict const double* G, 
+        @restrict const double* Aj, 
+        @restrict const double* Ai, 
+        @restrict const double* Volume)
 {
-  for (int j = 0; j < o_njc; j++;  @tile(8, @outer, @inner))
+  for (int j = 0; j < o_njc; j++; @tile(16, @outer))
   {
-    for (int i = 0; i < o_nic; i++; @tile(32, @inner))
+    int nj = o_njc;
+    int ni = o_nic;
+    for (int i = 0; i < o_nic; i++; @tile(16, @outer, @inner))
     {
       // res = right + top - left - bottom - source
-      const int nj = o_njc;
-      const int ni = o_nic;
-      const int idl = (j*(ni+1)+i);
-      const int idr = (j*(ni+1)+i+1);
-      const int idb = (j*ni+i);
-      const int idc = (j*ni+i);
-      const int idt = ((j+1)*ni+i);
+      int idl = (j*(ni+1)+i);
+      int idr = (j*(ni+1)+i+1);
+      int idb = (j*ni+i);
+      int idc = (j*ni+i);
+      int idt = ((j+1)*ni+i);
 
       //printf("idl = %d, idr = %d, idb = %d, idt = %d, idc = %d\n", idl, idr, idb, idt, idc);
-      for (int eq = 0; eq < o_NEQ; eq++)
+      for (int eq = 0; eq < o_NEQ; eq++; @tile(8, @inner))
       {
         Res[idc*o_NEQ+eq] = F[idl*o_NEQ+eq]*Ai[idl]
           + G[idb*o_NEQ+eq]*Aj[idb]
