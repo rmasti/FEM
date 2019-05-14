@@ -6,33 +6,27 @@
         @restrict const double* yc){
   //double thet; 
   //double g=o_ACCEL;// 0.1;
-  //@shared double U[o_njc*o_nic*o_NEQ];
 
-
-
-//#pragma unroll o_njc o_nic o_NEQ
-  for(int j = 0; j < o_njc; j++;  @outer)
+  for(int j = 0; j < o_njc; j++; @tile(16, @outer, @inner))
   {
-    for(int i = 0; i < o_nic; i++; @inner)
+    const int jg = j + o_ng;
+    for(int i = 0; i < o_nic; i++; @tile(16, @inner))
     {
-      int jg = j + o_ng;
-      int ig = i + o_ng;
-      int fill = j*o_nic+i;
-      double rho = U[(jg*o_nic_g+ig)*o_NEQ+o_rhoid];
-      double thet = atan2(yc[j*o_nic+i], xc[j*o_nic+i]);
-      double su = -1*(rho)*(o_ACCEL)*cos(thet);
-      double sv = -1*(rho)*(o_ACCEL)*sin(thet);
+      const int ig = i + o_ng;
+      const int fill = j*o_nic+i;
+      const double rho = U[(jg*o_nic_g+ig)*o_NEQ+o_rhoid];
+      const double thet = atan2(yc[j*o_nic+i], xc[j*o_nic+i]);
+      const double su = -1*(rho)*(o_ACCEL)*cos(thet);
+      const double sv = -1*(rho)*(o_ACCEL)*sin(thet);
       S[(fill)*o_NEQ+o_piid]= ((su*(-1)*o_ACCEL*cos(thet)) + (sv*(-1)*o_ACCEL*sin(thet)));
       S[(fill)*o_NEQ+o_uid] = su;
       S[(fill)*o_NEQ+o_vid] = sv;
 
-      /*
       S[(fill)*o_NEQ+o_rhoid] = 0.0;
       S[(fill)*o_NEQ+o_wid] = 0.0;
       S[(fill)*o_NEQ+o_bxid] = 0.0;
       S[(fill)*o_NEQ+o_byid] = 0.0;
       S[(fill)*o_NEQ+o_bzid] = 0.0;
-      */
       //printf("rho = %lf, o_ACCEL = %lf, su = %lf, sv = %lf, theta = %lf\n", rho, o_ACCEL, su, sv, sin(thet));// << rho << " " << o_ACCEL  << endl;
       //printf("S[(fill)*o_NEQ+o_piid] = %lf\n", S[(fill)*o_NEQ+o_vid]);
     }        
