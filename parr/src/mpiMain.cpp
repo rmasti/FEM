@@ -8,10 +8,11 @@ int main(int argc, char *argv[]){
   C.num_ghost = 3;
   C.cfl = 0.45;
   C.nmax = 10000;
-  C.wint = 100;
-  C.pint = 10;
+  C.wint = 1000;
+  C.pint = 50;
   double A = (2-1)/(1.0+2.0);
-  double tend = 6.0/sqrt(A*ACCEL*2);
+  //double tend = 6.0/sqrt(A*ACCEL*2);
+  double tend=0.12891;
   double dt;
   MatrixXd time(1, C.nmax);
 
@@ -20,7 +21,8 @@ int main(int argc, char *argv[]){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  string mesh = "../mesh/360x300.msh"; //debugMatlab.msh";
+  //string mesh = "../mesh/360x300.msh"; //debugMatlab.msh";
+  string mesh = "../mesh/560x480.msh"; //debugMatlab.msh";
   //string mesh = "../mesh/16x10.msh"; //debugMatlab.msh";
   string outputFolder = "./output/";
   //string outputFolder = "/mnt/c/Users/rlm78/Downloads/FEM/";

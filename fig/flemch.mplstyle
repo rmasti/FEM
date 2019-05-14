@@ -8,3 +8,4 @@ image.cmap : inferno
 image.origin : lower
 grid.linewidth : 0.5
 grid.linestyle : :
+lines.markersize : 10
